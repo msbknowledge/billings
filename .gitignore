@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+.git/
+ssl.key
+ssl.cert
+ssl.ca
+vendor/
+uploads/
