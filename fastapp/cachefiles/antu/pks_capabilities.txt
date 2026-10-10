@@ -1,0 +1,1 @@
+[{"Table":"capabilities","Non_unique":"0","Key_name":"PRIMARY","Seq_in_index":"1","Column_name":"capability_id","Collation":"A","Cardinality":"52","Sub_part":null,"Packed":null,"Null":"","Index_type":"BTREE","Comment":"","Index_comment":""}]

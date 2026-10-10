@@ -1,0 +1,1 @@
+[{"module_ID":{"Field":"module_ID","Type":"int(11)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"},"module_name":{"Field":"module_name","Type":"varchar(50)","Null":"NO","Key":"","Default":null,"Extra":""},"module_status":{"Field":"module_status","Type":"tinyint(1)","Null":"NO","Key":"","Default":"0","Extra":""}}]

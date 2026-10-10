@@ -1,0 +1,1 @@
+{"textarea_columns":["option_value"],"datetimepicker_columns":null,"datepicker_columns":null,"use_status_columns":null,"tablePrimaryKey":"option_ID","generalInput":["option_key"]}

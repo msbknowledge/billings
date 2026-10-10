@@ -1,0 +1,1 @@
+{"textarea_columns":["capability_actions"],"datetimepicker_columns":null,"datepicker_columns":null,"use_status_columns":null,"tablePrimaryKey":"capability_id","generalInput":["capability_user_type","capability_controller"]}

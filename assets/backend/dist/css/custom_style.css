@@ -1,0 +1,138 @@
+.box_dashboard{
+	display: block;
+    font-size: 15px;
+    margin-top: 38px;
+    white-space: nowrap;
+    margin-left: 19px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* =========================================================
+   jQuery UI Autocomplete Dropdown - Modern & Polished UI
+   ========================================================= */
+.ui-autocomplete {
+    position: absolute !important;
+    top: 100%;
+    left: 0;
+    z-index: 999999 !important;
+    display: none;
+    float: left;
+    min-width: 280px;
+    max-width: 520px;
+    max-height: 280px;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 6px 0 !important;
+    margin: 3px 0 0 0 !important;
+    list-style: none !important;
+    list-style-type: none !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    font-family: inherit !important;
+    font-size: 13px !important;
+    text-align: left !important;
+}
+
+/* Ensure no bullet dots or markers appear */
+.ui-autocomplete,
+.ui-autocomplete.ui-menu,
+.ui-autocomplete .ui-menu-item {
+    list-style: none !important;
+    list-style-type: none !important;
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+}
+
+.ui-autocomplete .ui-menu-item::marker,
+.ui-autocomplete .ui-menu-item::before {
+    display: none !important;
+    content: "" !important;
+}
+
+/* Menu item row */
+.ui-autocomplete .ui-menu-item {
+    display: block !important;
+    padding: 0 !important;
+    margin: 2px 6px !important;
+    cursor: pointer !important;
+    clear: both !important;
+    float: none !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+/* Menu item link, div, or inner text */
+.ui-autocomplete .ui-menu-item,
+.ui-autocomplete .ui-menu-item > a,
+.ui-autocomplete .ui-menu-item-wrapper {
+    display: block !important;
+    padding: 8px 14px !important;
+    color: #1e293b !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    line-height: 1.4 !important;
+    text-decoration: none !important;
+    border-radius: 6px !important;
+    border: none !important;
+    outline: none !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+/* Hover, Active and Focus states */
+.ui-autocomplete .ui-menu-item:hover,
+.ui-autocomplete .ui-menu-item.ui-state-focus,
+.ui-autocomplete .ui-menu-item.ui-state-active,
+.ui-autocomplete .ui-menu-item > a:hover,
+.ui-autocomplete .ui-menu-item > a.ui-state-focus,
+.ui-autocomplete .ui-menu-item > a.ui-state-active,
+.ui-autocomplete .ui-menu-item-wrapper:hover,
+.ui-autocomplete .ui-menu-item-wrapper.ui-state-active {
+    background-color: #2563eb !important;
+    background-image: none !important;
+    color: #ffffff !important;
+    border: none !important;
+    outline: none !important;
+    cursor: pointer !important;
+}
+
+.ui-autocomplete .ui-menu-item:hover > a,
+.ui-autocomplete .ui-menu-item.ui-state-focus > a,
+.ui-autocomplete .ui-menu-item.ui-state-active > a {
+    color: #ffffff !important;
+    background-color: transparent !important;
+}
+
+/* Sleek modern scrollbar */
+.ui-autocomplete::-webkit-scrollbar {
+    width: 6px;
+}
+.ui-autocomplete::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 4px;
+}
+.ui-autocomplete::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+.ui-autocomplete::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Screen reader accessible element */
+.ui-helper-hidden-accessible {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
