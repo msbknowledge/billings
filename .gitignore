@@ -6,3 +6,5 @@ ssl.cert
 ssl.ca
 vendor/
 uploads/
+
+/search/
