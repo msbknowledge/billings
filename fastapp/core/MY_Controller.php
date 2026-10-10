@@ -707,34 +707,21 @@ class MY_Controller extends CI_Controller {
             $result_array = json_decode(file_get_contents(ROOTPATH . 'fastapp/cachefiles/' . NODE . '/menu_cache.txt'), true);
             return $result_array;
         } else {
-            $isSuperAdmin = !empty($this->current_user_session['user_type_super']) || (isset($this->current_user_session['user_type_id']) && $this->current_user_session['user_type_id'] == 1);
-            $condition = array('menu_parent_id' => '0');
-            if (isset($this->current_user_session['user_ID']) && !$isSuperAdmin) {
-                $condition['menu_user_type_id'] = $this->current_user_session['user_type_id'];
-            }
+            $condition = NULL;
+            if (isset($this->current_user_session['user_ID']))
+                $condition = array('menu_parent_id' => '0', 'menu_user_type_id' => $this->current_user_session['user_type_id']);
 
-            $menu = $this->menus_model->get_list_for_dropdown(false, $condition);
+            $menu = $this->menus_model->get_list_for_dropdown(null, $condition);
+
+
             $processedMenu = array();
 
-            if (is_array($menu)) {
                 foreach ($menu as $key => $value) {
-                    if (!is_array($value) || !isset($value['menu_ID'])) {
-                        continue;
-                    }
                     $processedMenu[$key] = $value;
-                    $subCondition = array('menu_parent_id' => $value['menu_ID']);
-                    if (isset($this->current_user_session['user_ID']) && !$isSuperAdmin) {
-                        $subCondition['menu_user_type_id'] = $this->current_user_session['user_type_id'];
-                    }
-                    $subMenu = $this->menus_model->get_list_for_dropdown(false, $subCondition);
+                $subMenu = $this->menus_model->get_list_for_dropdown(null, array('menu_parent_id' => $value['menu_ID'], 'menu_user_type_id' => $this->current_user_session['user_type_id']));
 
-                    if (is_array($subMenu)) {
-                        foreach ($subMenu as $skey => $svalue) {
-                            if (is_array($svalue)) {
-                                $processedMenu[$skey] = $svalue;
-                            }
-                        }
-                    }
+                foreach ($subMenu as $key => $value) {
+                    $processedMenu[$key] = $value;
                 }
             }
 
@@ -743,25 +730,18 @@ class MY_Controller extends CI_Controller {
             $moduleMeta = $this->get_modules();
             if ($moduleMeta) {
                 foreach ($moduleMeta as $moduleData) {
-                    $configFile = ROOTPATH . 'modules/' . $moduleData . '/config.json';
-                    if (file_exists($configFile)) {
-                        $moduleMenu = json_decode(read_file($configFile), TRUE);
-                        if (isset($moduleMenu['menu']) && is_array($moduleMenu['menu'])) {
-                            foreach ($moduleMenu['menu'] as $value) {
-                                if (isset($value['menu_ID'])) {
-                                    $moduleMenuList[$value['menu_ID']] = $value;
-                                }
-                            }
+                    $moduleMenu = json_decode(read_file(ROOTPATH . 'modules/' . $moduleData . '/config.json'), TRUE);
+                    if (isset($moduleMenu['menu']) && is_array($moduleMenu['menu'])) {
+                        foreach ($moduleMenu['menu'] as $value) {
+                           // if ((!isset($value['menu_user_type_id'])) || ($value['menu_user_type_id'] == intval($this->current_user_session['user_type_id']))) {
+                                $moduleMenuList[$value['menu_ID']] = $value;
+                            //}
                         }
                     }
                 }
             }
 
-            $cacheDir = ROOTPATH . 'fastapp/cachefiles/' . NODE;
-            if (!is_dir($cacheDir)) {
-                @mkdir($cacheDir, 0777, true);
-            }
-            file_put_contents($cacheDir . '/menu_cache.txt', json_encode($moduleMenuList + $processedMenu));
+            file_put_contents(ROOTPATH . 'fastapp/cachefiles/' . NODE . '/menu_cache.txt', json_encode($moduleMenuList + $processedMenu));
             return $moduleMenuList + $processedMenu;
         }
     }
