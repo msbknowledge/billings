@@ -1,10 +1,5 @@
 <?php
-$nodeSegment = explode('.', $_SERVER['SERVER_NAME']);
-$node = 'u404684354_'.$nodeSegment[0];
-define('DB_SERVER', 'localhost');
-define('DB_USER',$node);
-define('DB_PASSWORD', 'BR66MK55@msb');
-define('DB_NAME', $node);
+require_once __DIR__ . '/db_config.php';
 $product_unit = 0;
 if (isset($_GET['term'])) {
     $return_arr = array();

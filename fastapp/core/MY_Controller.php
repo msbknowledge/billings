@@ -30,15 +30,24 @@ class MY_Controller extends CI_Controller {
         
     }
 
-    private function initilise() {
+   /**
+     * initialisation of varriables 
+     * @ticket:  $this->routedirectory must be changed
+     * * */
+    public function initilise() {
         /** populate basic site settings ans user data to application wise */
         $this->current_user_session = $this->session->userdata('current_user_session');
-        //$this->allowed_action = array('add_detail', 'edit_detail', 'delete', 'view_detail', 'quick_edit');
-        $this->allowed_action = array('add_detail', 'edit_detail', 'delete', 'view_detail', '');
+        $this->allowed_action = array('add_detail', 'edit_detail', 'delete', 'view_detail', 'quick_edit');
         $this->current_site_settings = $this->get_site_setting();
         $this->targetModel = $this->uri->segment(2) . 's_model';
+        /** populate site settings ans user data to application wise */
+        /*         * initialize the routing directory[think useless now]* */
+        if ($this->router->directory != '/') {
+            $this->routedirectory = $this->router->directory;
+        } else {
+            $this->routedirectory = 'console/';
+        }
     }
-
     /**
      * autoload module active module packages
      * with all models and helpers
@@ -55,6 +64,7 @@ class MY_Controller extends CI_Controller {
         
         //pr($modules);
         foreach ($modules as $moduleMeta) {
+            if (!is_dir(ROOTPATH . "modules/" . $moduleMeta)) continue;
             /*             * load the package */
             $this->load->add_package_path(ROOTPATH . "modules/" . $moduleMeta . '/');
 
@@ -119,55 +129,62 @@ class MY_Controller extends CI_Controller {
      *      * @ticket:  $this->is_authorised malfunctionaing
      * * */
     private function access_control() {
+
         if (!$this->is_capabale()) {
-            $this->show_error_page(403);
+            $this->show_error_page(403, 'Permission Denied: You do not have permission / capability to access this section.');
             exit();
         }
-        $this->is_authorised();
+        // pr($this->router->class);
+        /*         * prepare access controle links* */
+        $permission_list = $this->permissions_model->get_list(array(
+            'permission_user_type_id' => isset($this->current_user_session['user_type_id']) ? $this->current_user_session['user_type_id'] : 0,
+            'permission_controller' => isset($this->uri->segments[2]) ? $this->uri->segments[2] : $this->uri->rsegments[1]
+        ));
+        //$permission_list = NULL;
+        $permission_type_array = NULL;
+
+        if ($permission_list) {
+            foreach ($permission_list as $value) {
+                $permission_type_array[] = $value['permission_type'];
+            }
+            $this->page_config['allowed_action'] = implode(',', $permission_type_array);
+        }
+        unset($permission_list);
+        /*         * prepare capability permissio* */
+        $this->is_authorised($permission_type_array);
+        unset($permission_type_array);
+    }
+
+    private function get_capabilities() {
+        $searchCapability['capability_user_type'] = isset($this->current_user_session['user_type_id']) ? intval($this->current_user_session['user_type_id']) : 0;
+        $searchCapability['capability_controller'] = isset($this->uri->segments[2]) ? $this->uri->segments[2] : $this->uri->rsegments[1];
+        $capabilities = $this->capabilities_model->get_list($searchCapability);
+        return isset($capabilities[0]) ? $capabilities[0] : NULL;
     }
 
     /**
      * only for console capability check    
      *  */
     private function is_capabale() {
-        if ($this->current_user_session['user_type_super'] == 1) {
-            return true;
-        }
-        $controller = empty($this->uri->segment(2)) ? 'dashboard' : $this->uri->segment(2);
-        $capability_list = json_decode(get_option('capability_' . $controller), true);
-        $this->allowed_action = array_keys($capability_list['capability'][$controller][$this->current_user_session['user_type_id']]);
         if (isset($this->uri->segments[1]) && $this->uri->segments[1] == 'console') {
+            $capabilities = $this->get_capabilities();
             $verify_capable_action = isset($this->uri->segments[3]) ? $this->uri->segments[3] : $this->uri->rsegments[2];
-
-            if (in_array($verify_capable_action, $this->publicAccess)) {
-                return true;
+            if ($capabilities) {
+                if (!is_array($capabilities['capability_actions']) && ($capabilities['capability_actions'] == '*')) {
+                    return TRUE;
+                } else {
+                    $capabilities = explode(',', $capabilities['capability_actions']);
+                    if (in_array($verify_capable_action, $capabilities)) {
+                        return TRUE;
+                    }
+                }
             }
-
-            if ($verify_capable_action == 'capability_list')
-                return true;
-
-            if ($capability_list['capability'][$controller][$this->current_user_session['user_type_id']][$verify_capable_action] == 'true') {
-                return TRUE;
-            }
-            if($controller=="dashboard"||$verify_capable_action=="login"||$verify_capable_action=="logout"){
-                //allowed dashboard for all users
-                return TRUE;
-
-
-            }else{
-                // pr($capability_list['capability']);
-                // pr($controller);
-                // pr($verify_capable_action);
-                $message = '<script>window.location="' . console_url() . 'user/login"</script>Please Wait...';
-                show_error($message, '403', 'Not Authorised!! Please wait...');
-    
-                return FALSE;
-            }
-           
+            return FALSE;
         } else {
             return TRUE;
         }
     }
+
 
     /**
      * 
@@ -221,15 +238,46 @@ class MY_Controller extends CI_Controller {
     }
 
     private function get_modules() {
-        //$moduleMeta = $this->modules_model->get_list_for_dropdown('module_name', array('module_status' => 1));
-        
-	$moduleMeta = explode(',',PLAN_PACKAGES);
-	$modules = json_decode(PLAN_PACKAGES,true);
+        $activeModules = array();
 
-	if(!empty($modules)){
-		$moduleMeta = $modules ;
-	}
-        return $moduleMeta;
+        // 1. Fetch active modules from database `modules` table where module_status = 1
+        if (isset($this->db)) {
+            $query = $this->db->select('module_name')->where('module_status', 1)->get('modules');
+            if ($query && $query->num_rows() > 0) {
+                foreach ($query->result_array() as $m) {
+                    if (!empty($m['module_name'])) {
+                        $raw = trim($m['module_name']);
+                        $dec = json_decode($raw, true);
+                        if (is_array($dec)) {
+                            foreach ($dec as $item) {
+                                $item = trim($item);
+                                if (!empty($item)) $activeModules[] = $item;
+                            }
+                        } else {
+                            $activeModules[] = $raw;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Also merge any modules defined in PLAN_PACKAGES if set
+        if (defined('PLAN_PACKAGES') && !empty(PLAN_PACKAGES)) {
+            $planModules = json_decode(PLAN_PACKAGES, true);
+            if (!is_array($planModules)) {
+                $planModules = explode(',', PLAN_PACKAGES);
+            }
+            if (is_array($planModules)) {
+                foreach ($planModules as $pm) {
+                    $pm = trim($pm);
+                    if (!empty($pm) && !in_array($pm, $activeModules)) {
+                        $activeModules[] = $pm;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($activeModules));
     }
 
     public function excel_convert() {
@@ -447,6 +495,19 @@ class MY_Controller extends CI_Controller {
      * need modification
      */
     private function is_authorised($allowed_action = NULL) {
+        // Super Admin bypass — full permission
+        if (!empty($this->current_user_session['user_type_super'])
+            || (isset($this->current_user_session['user_type_id']) && $this->current_user_session['user_type_id'] == 1)
+        ) {
+            return TRUE;
+        }
+
+        // Always allowed auth actions
+        $alwaysAllowed = array('login', 'logout', 'profile', 'captcha_check', 'refresh_captcha', 'forgot_password');
+        if (in_array($this->router->method, $alwaysAllowed)) {
+            return TRUE;
+        }
+
         /*         * *
          * public access set in controllers
          */
@@ -467,14 +528,14 @@ class MY_Controller extends CI_Controller {
                 if (array_search($this->router->method, $allowed_action) !== FALSE) {
                     return TRUE;
                 } else {
-                    $this->show_error_page(403);
+                    $this->show_error_page(403, 'Permission Denied: You do not have permission to perform this action (' . $this->router->method . ').');
                     return false;
                 }
             }
             return true;
         } else {
             //redirect(base_url());
-            $this->show_error_page(401);
+            $this->show_error_page(401, 'Please login to continue.');
             return false;
         }
     }
@@ -702,48 +763,143 @@ class MY_Controller extends CI_Controller {
 
     protected function menu_generater() {
 
-        $result_array = null;
-        if (file_exists(ROOTPATH . 'fastapp/cachefiles/' . NODE . '/menu_cache.txt')) {
-            $result_array = json_decode(file_get_contents(ROOTPATH . 'fastapp/cachefiles/' . NODE . '/menu_cache.txt'), true);
-            return $result_array;
+        // Determine if current user is Super Admin
+        $isSuperAdmin = !empty($this->current_user_session['user_type_super'])
+            || (isset($this->current_user_session['user_type_id']) && $this->current_user_session['user_type_id'] == 1);
+
+        $userTypeId = isset($this->current_user_session['user_type_id'])
+            ? intval($this->current_user_session['user_type_id']) : 0;
+
+        // Role-specific cache file
+        $cacheDir  = ROOTPATH . 'fastapp/cachefiles/' . NODE;
+        $cacheFile = $cacheDir . '/menu_cache_' . ($isSuperAdmin ? 'super' : $userTypeId) . '.txt';
+
+        if (file_exists($cacheFile)) {
+            return json_decode(file_get_contents($cacheFile), true);
+        }
+
+        // --- Build menu from DB (SELECT * FROM menus) ---
+        $processedMenu = array();
+
+        // Fetch all top-level menus (menu_parent_id = 0)
+        if ($isSuperAdmin) {
+            // Super Admin: show ONLY super‑admin specific menus (menu_user_type_id = 1)
+            $topMenus = $this->menus_model->get_list_for_dropdown(false, array(
+                'menu_parent_id'    => '0',
+                'menu_user_type_id'=> 1,
+            ));
         } else {
-            $condition = NULL;
-            if (isset($this->current_user_session['user_ID']))
-                $condition = array('menu_parent_id' => '0', 'menu_user_type_id' => $this->current_user_session['user_type_id']);
+            // Regular user: only menus matching their role
+            $topMenus = $this->menus_model->get_list_for_dropdown(false, array(
+                'menu_parent_id'    => '0',
+                'menu_user_type_id' => $userTypeId,
+            ));
+        }
 
-            $menu = $this->menus_model->get_list_for_dropdown(null, $condition);
+        if (is_array($topMenus)) {
+            foreach ($topMenus as $key => $value) {
+                if (!is_array($value) || !isset($value['menu_ID'])) continue;
+                $processedMenu[$key] = $value;
 
-
-            $processedMenu = array();
-
-                foreach ($menu as $key => $value) {
-                    $processedMenu[$key] = $value;
-                $subMenu = $this->menus_model->get_list_for_dropdown(null, array('menu_parent_id' => $value['menu_ID'], 'menu_user_type_id' => $this->current_user_session['user_type_id']));
-
-                foreach ($subMenu as $key => $value) {
-                    $processedMenu[$key] = $value;
+                // Fetch children
+                if ($isSuperAdmin) {
+                    $subMenu = $this->menus_model->get_list_for_dropdown(false, array(
+                        'menu_parent_id'    => $value['menu_ID'],
+                        'menu_user_type_id'=> 1,
+                    ));
+                } else {
+                    $subMenu = $this->menus_model->get_list_for_dropdown(false, array(
+                        'menu_parent_id'    => $value['menu_ID'],
+                        'menu_user_type_id' => $userTypeId,
+                    ));
                 }
-            }
 
-            $moduleMenu = NULL;
-            $moduleMenuList = array();
-            $moduleMeta = $this->get_modules();
-            if ($moduleMeta) {
-                foreach ($moduleMeta as $moduleData) {
-                    $moduleMenu = json_decode(read_file(ROOTPATH . 'modules/' . $moduleData . '/config.json'), TRUE);
-                    if (isset($moduleMenu['menu']) && is_array($moduleMenu['menu'])) {
-                        foreach ($moduleMenu['menu'] as $value) {
-                           // if ((!isset($value['menu_user_type_id'])) || ($value['menu_user_type_id'] == intval($this->current_user_session['user_type_id']))) {
-                                $moduleMenuList[$value['menu_ID']] = $value;
-                            //}
+                if (is_array($subMenu)) {
+                    foreach ($subMenu as $skey => $svalue) {
+                        if (is_array($svalue) && isset($svalue['menu_ID'])) {
+                            $processedMenu[$skey] = $svalue;
                         }
                     }
                 }
             }
-
-            file_put_contents(ROOTPATH . 'fastapp/cachefiles/' . NODE . '/menu_cache.txt', json_encode($moduleMenuList + $processedMenu));
-            return $moduleMenuList + $processedMenu;
         }
+
+        // --- Merge module menus from config.json (only for entries NOT already in DB) ---
+        // Build a lookup of existing DB menus by menu_link and menu_name to prevent duplicates.
+        // DB uses integer keys (20,27...) while config.json uses string keys ("billing","purchase"...)
+        // so key-based check alone is not enough — we must compare by link+name.
+        $dbMenuLinks = array();
+        $dbMenuNames = array();
+        foreach ($processedMenu as $dbItem) {
+            if (!empty($dbItem['menu_link'])) {
+                $dbMenuLinks[strtolower(trim($dbItem['menu_link']))] = true;
+            }
+            if (!empty($dbItem['menu_name'])) {
+                $dbMenuNames[strtolower(trim($dbItem['menu_name']))] = true;
+            }
+        }
+
+        $moduleMenuList = array();
+        // Only load from config.json if DB returned zero menus (fallback mode)
+        if (empty($processedMenu)) {
+            $moduleMeta = $this->get_modules();
+            if ($moduleMeta) {
+                foreach ($moduleMeta as $moduleData) {
+                    $configFile = ROOTPATH . 'modules/' . $moduleData . '/config.json';
+                    if (!file_exists($configFile)) continue;
+                    $moduleMenu = json_decode(read_file($configFile), TRUE);
+                    if (isset($moduleMenu['menu']) && is_array($moduleMenu['menu'])) {
+                        foreach ($moduleMenu['menu'] as $mItem) {
+                            if (!isset($mItem['menu_ID'])) continue;
+                            if ($isSuperAdmin) {
+                                $moduleMenuList[$mItem['menu_ID']] = $mItem;
+                            } elseif (!isset($mItem['menu_user_type_id']) || intval($mItem['menu_user_type_id']) == $userTypeId) {
+                                $moduleMenuList[$mItem['menu_ID']] = $mItem;
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // DB has menus — only add config.json entries that are genuinely missing
+            // (not already covered by DB rows, checked by link AND name)
+            $moduleMeta = $this->get_modules();
+            if ($moduleMeta) {
+                foreach ($moduleMeta as $moduleData) {
+                    $configFile = ROOTPATH . 'modules/' . $moduleData . '/config.json';
+                    if (!file_exists($configFile)) continue;
+                    $moduleMenu = json_decode(read_file($configFile), TRUE);
+                    if (isset($moduleMenu['menu']) && is_array($moduleMenu['menu'])) {
+                        foreach ($moduleMenu['menu'] as $mItem) {
+                            if (!isset($mItem['menu_ID'])) continue;
+                            // Skip if DB already has a menu with the same link or name
+                            $mLink = strtolower(trim(isset($mItem['menu_link']) ? $mItem['menu_link'] : ''));
+                            $mName = strtolower(trim(isset($mItem['menu_name']) ? $mItem['menu_name'] : ''));
+                            if (isset($dbMenuLinks[$mLink]) && $mLink !== '') continue;
+                            if (isset($dbMenuNames[$mName]) && $mName !== '') continue;
+                            // Also skip if key already present
+                            if (isset($processedMenu[$mItem['menu_ID']])) continue;
+                            // Permission filter
+                            if ($isSuperAdmin) {
+                                $moduleMenuList[$mItem['menu_ID']] = $mItem;
+                            } elseif (!isset($mItem['menu_user_type_id']) || intval($mItem['menu_user_type_id']) == $userTypeId) {
+                                $moduleMenuList[$mItem['menu_ID']] = $mItem;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $finalMenu = $moduleMenuList + $processedMenu;
+
+        // Write role-specific cache
+        if (!is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0777, true);
+        }
+        file_put_contents($cacheFile, json_encode($finalMenu));
+
+        return $finalMenu;
     }
 
     /*
@@ -951,10 +1107,44 @@ class MY_Controller extends CI_Controller {
 
     private function show_error_page($code = null, $message = null) {
         if ($this->uri->segment(1) == 'console') {
-            $message = '<script>window.location="' . console_url() . 'user/login"</script>Please Wait...';
-            show_error($message, $code, 'Oops!! Please wait...');
+            if ($code == 403) {
+                $msgText = !empty($message) ? $message : 'Permission Denied: You do not have permission to access this page.';
+                $redirectUrl = isset($this->current_user_session['user_ID']) ? console_url() . 'dashboard' : console_url() . 'user/login';
+
+                if ($this->input->is_ajax_request()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(array('status' => 'error', 'message' => $msgText));
+                    exit();
+                }
+
+                $msgBody = '<div style="padding: 20px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif;">'
+                    . '<p style="font-size: 16px; color: #a94442; background-color: #f2dede; border: 1px solid #ebccd1; border-radius: 4px; padding: 15px; margin-bottom: 20px;">'
+                    . '<strong>&#9888; Permission Denied:</strong> ' . htmlspecialchars($msgText)
+                    . '</p>'
+                    . '<p style="color: #666; font-size: 14px;">'
+                    . 'Redirecting to Dashboard in 3 seconds... '
+                    . '<a href="' . $redirectUrl . '" style="color: #337ab7; text-decoration: underline; font-weight: bold;">Click here if not redirected automatically</a>'
+                    . '</p>'
+                    . '<script>setTimeout(function(){ window.location="' . $redirectUrl . '"; }, 3000);</script>'
+                    . '</div>';
+
+                show_error($msgBody, 403, 'Access Denied: Permission Required');
+                return;
+            }
+
+            if ($code == 401) {
+                $redirectUrl = console_url() . 'user/login';
+                $msgText = !empty($message) ? $message : 'Please login to continue.';
+                $msgBody = '<script>window.location="' . $redirectUrl . '"</script>' . $msgText;
+                show_error($msgBody, 401, 'Please Login');
+                return;
+            }
+
+            $msgBody = (!empty($message) ? $message : 'Please wait...') . '<script>setTimeout(function(){ window.location="' . console_url() . 'dashboard"; }, 2000);</script>';
+            show_error($msgBody, $code, 'Notice');
         } else {
-            $message = $code . ': Content is not available..please wait, while we are redirecting.<script>window.location="' . base_url() . '"</script>';
+            $msgText = !empty($message) ? $message : 'Content is not available..please wait, while we are redirecting.';
+            $message = $code . ': ' . $msgText . '<script>setTimeout(function(){ window.location="' . base_url() . '"; }, 2000);</script>';
             show_error($message, $code, 'Oops!! Please wait...');
         }
     }

@@ -1,1153 +1,229 @@
-
-     <!-- <script>
-                                $(function () {
-                                    $(".datepicker").datepicker({dateFormat: 'yy-mm-dd'});
-                                });
-                            </script> -->
-     <script>
-         var reqst = null;
-         $(document).ready(function() {
-             // $("#amount").html("Total Stock MRP Amount: ");
-
-             $('#amount_show').click(function() {
-                 $("#amount_show").hide();
-                 $("#wait_message").show();
-                 reqst = $.post("<?= base_url() ?>console/medicine_stock/current_stock/", function(resp) {
-                     console.log(resp);
-                     var obj = JSON.parse(resp);
-                     if (obj.status == "success") {
-                         $("#wait_message").hide();
-                         var total_result = Math.round(obj.result);
-                         $("#amount_re").html("Total stock MRP amount:  RS " + total_result +"/-");
-                         //$('div#container').hide();
-                     } else {
-                         $("#amount_re").html("Total stock MRP amount not found.");
-                     }
-                 });
-             });
-             $('div#container').hide();
-
-         });
-     </script>
-
-  
-     <style>
-         body {
-             background: #FFFFFF;
-         }
-
-         body,
-         td,
-         th,
-         input,
-         select,
-         textarea,
-         option,
-         optgroup {
-             font-family: Verdana, Arial, Helvetica, sans-serif;
-             font-size: 12px;
-             color: #000000;
-         }
-
-         h1 {
-             text-transform: uppercase;
-             color: #CCCCCC;
-             text-align: right;
-             font-size: 24px;
-             font-weight: normal;
-             padding-bottom: 5px;
-             margin-top: 0px;
-             margin-bottom: 15px;
-             border-bottom: 1px solid black;
-         }
-
-         .store {
-             width: 100%;
-             margin-bottom: 20px;
-         }
-
-         .div2 {
-             float: left;
-             display: inline-block;
-         }
-
-         .div3 {
-             float: right;
-             display: inline-block;
-             padding: 5px;
-         }
-
-         .heading td {
-             background: #E7EFEF;
-         }
-
-         .address,
-         .product {
-             border-collapse: collapse;
-         }
-
-         .address {
-             width: 100%;
-             margin-bottom: 20px;
-             border-top: 1px solid black;
-             border-right: 1px solid black;
-         }
-
-         .address th,
-         .address td {
-             border-left: 1px solid black;
-             border-bottom: 1px solid black;
-             padding: 5px;
-             vertical-align: text-bottom;
-         }
-
-         .address td {
-             width: 50%;
-         }
-
-         .product {
-             width: 100%;
-             margin-bottom: 20px;
-             border-top: 1px solid black;
-             border-right: 1px solid black;
-         }
-
-         .product td {
-             border-left: 1px solid black;
-             border-bottom: 1px solid black;
-             padding: 5px;
-         }
-     </style>
-     <style media="print">
-         body {
-             background-color: #FFF;
-             background-image: none;
-         }
-
-         .delete,
-         .button,
-         #addrow,
-         #head,
-         #actions {
-             display: none;
-         }
-
-         #main {
-             border: none;
-             height: auto;
-         }
-
-         table tr td textarea {
-             margin-top: 0;
-         }
-
-         body {
-             margin-top: -50px;
-         }
-
-         textarea {
-             background: #FFF;
-         }
-
-         input {
-             background: #FFF;
-         }
-
-         .sub-total {
-             border-top: 1px dashed #CCC;
-             border-bottom: 1px dashed #CCC;
-         }
-     </style>
-     <style>
-         /* http://meyerweb.com/eric/tools/css/reset/ 
-                                       v2.0 | 20110126
-                                       License: none (public domain)
-                                    */
-
-         html,
-         body,
-         div,
-         span,
-         applet,
-         object,
-         iframe,
-         h1,
-         h2,
-         h3,
-         h4,
-         h5,
-         h6,
-         p,
-         blockquote,
-         pre,
-         a,
-         abbr,
-         acronym,
-         address,
-         big,
-         cite,
-         code,
-         del,
-         dfn,
-         em,
-         img,
-         ins,
-         kbd,
-         q,
-         s,
-         samp,
-         small,
-         strike,
-         strong,
-         sub,
-         sup,
-         tt,
-         var,
-         b,
-         u,
-         i,
-         center,
-         dl,
-         dt,
-         dd,
-         ol,
-         ul,
-         li,
-         fieldset,
-         form,
-         label,
-         legend,
-         table,
-         caption,
-         tbody,
-         tfoot,
-         thead,
-         tr,
-         th,
-         td,
-         article,
-         aside,
-         canvas,
-         details,
-         embed,
-         figure,
-         figcaption,
-         footer,
-         header,
-         hgroup,
-         menu,
-         nav,
-         output,
-         ruby,
-         section,
-         summary,
-         time,
-         mark,
-         audio,
-         video {
-             margin: 0;
-             padding: 0;
-             border: 0;
-             font-size: 100%;
-             font: inherit;
-             vertical-align: baseline;
-         }
-
-         /* HTML5 display-role reset for older browsers */
-         article,
-         aside,
-         details,
-         figcaption,
-         figure,
-         footer,
-         header,
-         hgroup,
-         menu,
-         nav,
-         section {
-             display: block;
-         }
-
-         body {
-             line-height: 1;
-         }
-
-         ol,
-         ul {
-             list-style: none;
-         }
-
-         blockquote,
-         q {
-             quotes: none;
-         }
-
-         blockquote:before,
-         blockquote:after,
-         q:before,
-         q:after {
-             content: '';
-             content: none;
-         }
-
-         table {
-             border-collapse: collapse;
-             border-spacing: 0;
-         }
-
-         /*__________________________________________________Universal
-                                    Universal
-                                    */
-
-         body {
-             background-color: #F0F0F0;
-             background-repeat: repeat;
-             font-size: 100%;
-             color: #000;
-             font-family: Arial, Helvetica, sans-serif;
-         }
-
-         .left {
-             float: left;
-         }
-
-         .right {
-             float: right;
-         }
-
-         .clear {
-             clear: both;
-         }
-
-         input,
-         textarea {
-             margin: 0;
-             padding: 0;
-             border: none;
-             outline: none;
-             background: transparent;
-             font-family: Arial, Helvetica, sans-serif;
-         }
-
-         p,
-         input {
-             font-size: 1em;
-             padding: 2px 0;
-         }
-
-         textarea {
-             display: block;
-             background: #E3FAFA;
-         }
-
-         input {
-             background: #E3FAFA;
-         }
-
-         input:hover,
-         textarea:hover {
-             background: #FFFFCC;
-         }
-
-         input:focus,
-         textarea:focus {
-             border: 1px solid #666;
-         }
-
-         .price:hover {
-             background: #FFF;
-         }
-
-         .price:focus {
-             border: none;
-         }
-
-         .button {
-             display: inline;
-             padding: 4px 8px;
-             background: url(../images/button-bg.png) repeat-x;
-             color: #666;
-             border: 1px solid #ccc;
-             font: bold .95em Helvetica;
-             text-decoration: none;
-         }
-
-         .button:hover {
-             color: #333;
-             border: 1px solid #666;
-             background: url(../images/button-bg.png) repeat-x;
-         }
-
-         .button:active {
-             background: url(../images/button-bg.png) repeat-x;
-             background-position: bottom left;
-         }
-
-         /*__________________________________________________Head
-                                    Head
-                                    */
-
-         #head {
-             margin: 0 auto;
-             padding-top: 10px;
-             margin-bottom: 20px;
-             width: 864px;
-         }
-
-         h1 {
-             padding-bottom: 10px;
-             color: #EEE;
-             font-weight: normal;
-             font-size: 2em;
-         }
-
-         #about-head {
-             margin-bottom: 4px;
-         }
-
-         h3 {
-             color: #333;
-             font-size: 1.4em;
-             display: inline;
-         }
-
-         #about,
-         #how-to {
-             padding: 5px;
-             background: #EEE;
-             color: #333;
-             border: 1px solid #666;
-         }
-
-         #about p,
-         #how-to p {
-             padding-bottom: 8px;
-         }
-
-         strong {
-             font-weight: bold;
-         }
-
-         /*__________________________________________________Banner Ad
-                                    Banner AD
-                                    */
-
-         #banner-ad {
-             margin-bottom: 20px;
-         }
-
-         /*__________________________________________________Actions
-                                    Actions
-                                    */
-
-         #actions {
-             margin: 0 auto;
-             padding-top: 10px;
-             margin-bottom: -20px;
-             width: 864px;
-         }
-
-         /*__________________________________________________Main
-                                    Main
-                                    */
-
-         #main {
-             margin: 30px auto;
-             padding: 32px;
-             width: 800px;
-             height: 1040px;
-             background: #FFF;
-             border: 1px solid #808080;
-         }
-
-         .main {
-             margin: 30px auto;
-             padding: 32px;
-             /*width: 800px;*/
-             height: 1040px;
-             background: #FFF;
-             border: 1px solid #808080;
-             page-break-after: always;
-         }
-
-         /*__________________________________________________Invoice
-                                    Invoice
-                                    */
-
-         #title {
-             font-weight: bold;
-             text-align: center;
-             padding-bottom: 16px;
-         }
-
-         #title h1 {
-             padding: 0;
-             margin: 0;
-             font-size: 1.25em;
-             color: #000;
-         }
-
-         #title h2 {
-             font-size: 1em;
-             color: #000;
-         }
-
-
-         #invHeader {
-             padding-bottom: 16px;
-             margin-bottom: 16px;
-             border-bottom: 1px solid #CCC;
-         }
-
-         #headLeft,
-         #signatureLeft {
-             float: left;
-             width: 392px;
-             border-bottom: 1px solid #CCC;
-         }
-
-         #headLeft p,
-         #headRight p,
-         #signatureLeft p,
-         #signatureRight p {
-             font-weight: bold;
-             font-size: .85em;
-         }
-
-         #legal {
-             padding: 4px;
-             margin-bottom: 4px;
-             border: 1px solid #CCC;
-             font-size: .70em;
-         }
-
-         #legal ul {
-             list-style-type: circle;
-         }
-
-         #legal ul li {
-             padding: 4px 0;
-             margin-left: 2em;
-         }
-
-         #signature p {
-             padding-left: 4px;
-         }
-
-         #headLeft div {
-             padding: 4px;
-             border-top: 1px solid #CCC;
-             border-left: 1px solid #CCC;
-             border-right: 1px solid #CCC;
-         }
-
-         #signatureLeft div {
-             padding: 1px 4px;
-             border-top: 1px solid #CCC;
-             border-left: 1px solid #CCC;
-             border-right: 1px solid #CCC;
-         }
-
-         #signatureRight div {
-             padding: 1px 4px;
-         }
-
-         #signatureRightRight {
-             border-left: none !important;
-         }
-
-         #headLeft textarea {
-             font-size: 1.2em;
-             text-align: left;
-             width: 100%;
-             height: 96px;
-         }
-
-         #headRight {
-             margin-left: 12px;
-             float: left;
-             width: 392px;
-             border: 1px solid #CCC;
-         }
-
-         #signatureRight {
-             float: left;
-             width: 402px;
-             border-bottom: 1px solid #CCC;
-         }
-
-         #headRightRight div,
-         #headRightLeft div {
-             padding: 0 4px;
-         }
-
-         #headRight p {
-             padding-left: 4px;
-         }
-
-         #headLeft input,
-         #headRight input,
-         #signatureLeft input,
-         #signatureRight input {
-             margin-bottom: 8px;
-             width: 100%;
-             display: block;
-         }
-
-         #headRightLeft,
-         #headRightRight {
-             padding-top: 32px;
-             padding-bottom: 60px;
-             float: left;
-             width: 192px;
-         }
-
-         #signatureRightLeft,
-         #signatureRightRight {
-             float: left;
-             width: 192px;
-         }
-
-         #headRight textarea {
-             font-size: 1em;
-             text-align: left;
-             width: 100%;
-             height: 72px;
-         }
-
-         #headRightBottom {
-             padding: 4px;
-             border-top: 1px solid #CCC;
-             width: 374px;
-         }
-
-         #headRightBottom textarea {
-             font-size: 1.2em;
-             text-align: left;
-             width: 100%;
-             height: 96px;
-         }
-
-         table {
-             width: 800px;
-         }
-
-         table {
-             border-collapse: collapse;
-         }
-
-         table td,
-         table th {
-             padding: 5px;
-         }
-
-         table th {
-             text-align: left;
-             font-weight: bold;
-             border-bottom: 1px solid #CCC;
-         }
-
-         table th input {
-             font-weight: bold;
-             display: inline;
-             width: 32px;
-         }
-
-         table tr td input {
-             width: 100%;
-         }
-
-         table tr td textarea {
-             margin-top: -16px;
-             width: 100%;
-             height: 24px;
-             font-size: 16px;
-         }
-
-         .item-name {
-             width: 432px;
-         }
-
-
-         .hsNo {
-             width: 80px;
-         }
-
-         .NC {
-             width: 80px;
-         }
-
-         .mfr {
-             width: 80px;
-         }
-
-         .pref {
-             width: 80px;
-         }
-
-         .country {
-             width: 80px;
-         }
-
-         .countryInpt {
-             width: 80px;
-         }
-
-         .delete-wpr input {
-             display: inline;
-             width: 432px;
-         }
-
-         .delete {
-             text-decoration: none;
-             font-weight: bold;
-             color: red;
-             padding-right: 3px;
-             margin-right: 3px;
-             margin-left: -19px;
-             border-right: 1px solid #000;
-         }
-
-         #addrow {
-             text-decoration: none;
-             color: green;
-         }
-
-         .total-line,
-         .total-weight,
-         .total-qty,
-         .total-value {
-             font-weight: bold;
-         }
-
-         .sub-total {
-             background: #DDD;
-         }
-
-         #signature {
-             margin-top: 32px;
-         }
-
-         /**default*/
-
-         .main h1 {
-             text-transform: uppercase;
-             color: #CCCCCC;
-             text-align: right;
-             font-size: 24px;
-             font-weight: normal;
-             padding-bottom: 5px;
-             margin-top: 0px;
-             margin-bottom: 15px;
-             border-bottom: 1px solid #CDDDDD;
-         }
-
-         .main .store {
-             width: 100%;
-             margin-bottom: 20px;
-         }
-
-         .main .div2 {
-             float: left;
-             display: inline-block;
-         }
-
-         .main .div3 {
-             float: right;
-             display: inline-block;
-             padding: 5px;
-         }
-
-         .main .heading td {
-             background: #E7EFEF;
-         }
-
-         .main .address,
-         .main .product {
-             border-collapse: collapse;
-         }
-
-         .main .address {
-             width: 100%;
-             margin-bottom: 20px;
-             border-top: 1px solid #CDDDDD;
-             border-right: 1px solid #CDDDDD;
-         }
-
-         .main .address th,
-         .main.address td {
-             border-left: 1px solid #CDDDDD;
-             border-bottom: 1px solid #CDDDDD;
-             padding: 5px;
-             vertical-align: text-bottom;
-         }
-
-         .main .address td {
-             width: 50%;
-         }
-
-         .main .product {
-             width: 100%;
-             margin-bottom: 20px;
-             border-top: 1px solid #CDDDDD;
-             border-right: 1px solid #CDDDDD;
-         }
-
-         .main .product td {
-             border-left: 1px solid #CDDDDD;
-             border-bottom: 1px solid #CDDDDD;
-             padding: 5px;
-         }
-
-         textarea,
-         input[type=text] {
-             font-size: 13px !important;
-         }
-
-         .main {
-             border: none !important;
-             /* height: 1095px;*/
-             margin: 0 auto;
-         }
-
-         .main .calculation {
-             border-top: 1px solid black;
-             border-right: 1px solid black;
-         }
-
-         .main .calculation th,
-         .calculation td {
-             border: 1px solid black;
-             border: 1px solid black;
-         }
-
-         .main .address {
-             width: 100%;
-             margin-bottom: 20px;
-             border-top: 1px solid black;
-             border-right: 1px solid black;
-         }
-
-         .main h1 {
-             border-bottom: 1px solid black;
-         }
-
-         @page {
-             size: A4 portrait;
-             margin: 0.1in 0.1in 0in 0in;
-         }
-
-         @media print {
-             /* td{
-                                             border-color: black;
-                                             border-width: 2px;
-                                             background:#fff;
-                                         }
-                                        */
-         }
-
-         .main+.main {
-             page-break-before: always;
-         }
-     </style>
-     <style>
-         .address th,
-         .address td {
-             border-left: 0px solid #000;
-             border-bottom: 1px solid #000;
-             padding: 5px;
-             vertical-align: text-bottom;
-         }
-
-         .main .address {
-             width: 100%;
-             margin-bottom: 20px;
-             border-top: 1px solid #000;
-             border-right: 0px solid #000;
-         }
-
-         .main .calculation {
-             border-top: 1px solid #000;
-             border-right: 0px solid #000;
-         }
-
-         .main .calculation th,
-         .calculation td {
-             border: 1px solid #000;
-             border-top-width: 1px;
-             border-right-width: 0px;
-             border-bottom-width: 1px;
-             border-left-width: 1px;
-             border-top-style: solid;
-             border-right-style: solid;
-             border-bottom-style: solid;
-             border-left-style: solid;
-             border-top-color: #000;
-             border-right-color: #000;
-             border-bottom-color: #000;
-             border-left-color: #000;
-             -moz-border-top-colors: none;
-             -moz-border-right-colors: none;
-             -moz-border-bottom-colors: none;
-             -moz-border-left-colors: none;
-             border-image-source: none;
-             border-image-slice: 100% 100% 100% 100%;
-             border-image-width: 1 1 1 1;
-             border-image-outset: 0 0 0 0;
-             border-image-repeat: stretch stretch;
-         }
-     </style>
-     <style>
-         .main {
-             border: medium none !important;
-             height: auto;
-             display: block;
-         }
-
-         .main .calculation {
-             border-top: 1px solid black;
-             border-right: 1px solid black;
-             width: 100%;
-             border-spacing: 0px;
-             border-collapse: collapse;
-         }
-
-         .main .calculation th,
-         .calculation td {
-             border: 1px solid black;
-             border: 1px solid black;
-         }
-
-         .main .address {
-             width: 100%;
-             margin-bottom: 20px;
-             border-top: 1px solid black;
-             border-right: 1px solid black;
-         }
-
-         .main h1 {
-             border-bottom: 1px solid black;
-         }
-
-         td {
-             font-size: 10px;
-         }
-
-         @media print {
-             .form_div {
-                 display: none;
-             }
-
-             .display_print {
-                 display: none;
-             }
-
-             .container-fluid {
-                 display: none;
-             }
-
-             a[href]:after {
-                 content: none !important;
-             }
-
-             .tfoot {
-                 display: none;
-             }
-
-             table thead {
-                 display: table;
-                 width: 100%;
-                 background-color: lightblue;
-                 position: fixed;
-             }
-         }
-
-         .ajax_resp {
-             text-align: center
-         }
-     </style>
-
-     <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-
-        <div class="index-wrapper">
-         <div class="row-fluid sortable search_box ui-sortable">
-            <div class="box span12">
-                <div class="box-header well" data-original-title="">
-                    <h2><i class="icon-search"></i>Stock List</h2>
-                    <div class="box-icon">
-                        <a href="#" class="btn btn-minimize btn-round"><i class="icon-chevron-up"></i></a>
-                        <a href="#" class="btn btn-close btn-round"><i class="icon-remove"></i></a>
+<div class="row">
+    <div class="col-md-12">
+        <!-- Stock Summary Card -->
+        <div class="well well-sm" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #ffffff; border-radius: 6px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div class="row" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                <div class="col-sm-6" style="display: flex; align-items: center;">
+                    <div style="background: rgba(255,255,255,0.15); border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                        <i class="fa fa-cubes" style="font-size: 24px; color: #ffffff;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85;">Total Stock MRP Value</div>
+                        <div id="amount_val" style="font-size: 24px; font-weight: 700; color: #ffffff;">Click to Calculate</div>
                     </div>
                 </div>
-                <div class="box-content">
-        
-         <div class="display_print">
-             <!-- <div class="form_div form-group" style="margin-bottom: 10px;text-align: center;"> -->
-             <div class="container">
-                 <div class="row form-group">
+                <div class="col-sm-6 text-right" style="margin-top: 10px;">
+                    <span id="wait_message" style="display:none; color: #ffeb3b; font-size: 13px; margin-right: 12px; font-weight: 600;">
+                        <i class="fa fa-spinner fa-spin"></i> Calculating total MRP...
+                    </span>
+                    <button id="amount_show" type="button" class="btn btn-warning" style="font-weight: 600; padding: 7px 18px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                        <i class="fa fa-calculator"></i> Calculate MRP Total
+                    </button>
+                </div>
+            </div>
+        </div>
 
-                     <div class="form-row">
-                         <div class="form-group col-sm-7">
-                             <h1 id="amount_re" style="text-align: center;background-color: teal;font-family: initial;color: white;margin-bottom:10px">Total Stock MRP Amount: <div id='wait_message' style="font-size: 13px;display:none;color: yellow;">Please wait while search is in progress...
-                                 </div>
-                                 <button id="amount_show" style="background: yellowgreen;border: crimson;border-radius: 5px;width: 50px;height: 20px;font-size: 14px;">show</button>
-                         </div>
-                         <form action="<?= base_url() ?>console/medicine_stock/stock" id="searchform" role="form" method="post" onsubmit="return false">
-                             <div class="form-group col-sm-3">
-                                 <input type="text" name="medicine_name" id="medicine_name" placeholder="medicine name" class="form-control" />
-                             </div>
-                             <div class="form-group col-sm-2">
-                                 <button type="submit" id="search" class="btn btn-info">SEARCH</button>
-                             </div>
-                         </form>
-                     </div>
+        <!-- Main Stock Table Box -->
+        <div class="box box-primary" style="border-top: 3px solid #3c8dbc; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div class="box-header with-border" style="padding: 15px;">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <h3 class="box-title" style="font-size: 18px; font-weight: 600; margin-top: 5px;">
+                            <i class="fa fa-medkit text-primary"></i> Medicine Stock List
+                        </h3>
+                    </div>
+                    <div class="col-sm-6">
+                        <form action="<?= base_url() ?>console/medicine_stock/stock" id="searchform" role="form" method="post" onsubmit="return false">
+                            <div class="input-group">
+                                <input type="text" name="medicine_name" id="medicine_name" placeholder="Search medicine name..." class="form-control" autocomplete="off" />
+                                <span class="input-group-btn">
+                                    <button type="submit" id="search" class="btn btn-primary" style="font-weight: 600;">
+                                        <i class="fa fa-search"></i> SEARCH
+                                    </button>
+                                    <button type="button" id="clear_search" class="btn btn-default" style="margin-left: 2px;">
+                                        <i class="fa fa-refresh"></i> Reset
+                                    </button>
+                                </span>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
 
-                 </div>
-             </div>
-             <div class="ajax_resp">Choose Filter To Generate Data</div><br>
-         </div>
-         <style>
-             @media print {
+            <div class="box-body no-padding table-responsive" style="overflow-x: auto;">
+                <table class="table table-bordered table-striped table-hover" style="margin-bottom: 0;">
+                    <thead style="background-color: #f4f6f9;">
+                        <tr>
+                            <th style="width: 60px; text-align: center;">#</th>
+                            <th>Medicine Name</th>
+                            <th>Manufacturer</th>
+                            <th style="width: 80px; text-align: center;">Unit</th>
+                            <th style="width: 120px; text-align: center;">Strip Stock</th>
+                            <th style="width: 110px; text-align: center;">Loose Stock</th>
+                            <th style="width: 130px; text-align: center;">Storage</th>
+                        </tr>
+                    </thead>
+                    <tbody id="searchResult">
+                        <tr>
+                            <td colspan="7" class="text-center" style="padding: 30px;">
+                                <i class="fa fa-spinner fa-spin fa-2x text-muted"></i>
+                                <div style="margin-top: 8px; color: #777;">Loading stock data...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 
-                 html,
-                 body {
-                     display: block;
-                     font-family: "Calibri";
-                     margin: 0;
-                 }
+<script>
+    var pageCount = 1;
+    var isLoading = false;
 
-                 @page {
-                     size: 21.59cm 13.97cm;
-                 }
+    function doSearch(resetPage) {
+        if (isLoading) return;
+        if (resetPage) {
+            pageCount = 1;
+            $('#searchResult').html('<tr><td colspan="7" class="text-center" style="padding: 25px;"><i class="fa fa-spinner fa-spin fa-2x text-primary"></i><div style="margin-top: 8px; color: #555;">Searching medicines...</div></td></tr>');
+            $('tfoot').empty();
+        }
 
-                 .logo {
-                     width: 30%;
-                 }
-             }
+        isLoading = true;
+        var postData = $('#searchform').serialize();
+        var url = $('#searchform').attr("action") + "?page=" + pageCount;
 
-             .btn-block {
-                 color: blue;
-                 background-color: #337ab7;
-                 border-color: #2e6da4;
-             }
-         </style>
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: postData,
+            dataType: 'json',
+            success: function(resp) {
+                isLoading = false;
+                var objresp = (typeof resp === 'string') ? JSON.parse(resp) : resp;
 
-         <div class="row" style=" margin: 0px; overflow-x: scroll;">
-             <table class="table table-bordered table-striped table-condensed" style="text-align: center;">
-                 <!-- <caption><h3>Stock List</h3></caption> -->
-                 <tr>
-                     <th>Sl No.</th>
-                     <th>Name</th>
-                     <th>Mfg</th>
-                     <th>Unit</th>
-                     <th>Strip Stock</th>
-                     <th>Loose Stock</th>
-                     <th>Storage</th>
-                 </tr>
-                 <tbody id="searchResult">
+                if (objresp.status === "not found" || !objresp.result || objresp.result.length === 0) {
+                    if (pageCount === 1) {
+                        $('#searchResult').html('<tr><td colspan="7" class="text-center text-muted" style="padding: 30px; font-size: 14px;"><i class="fa fa-info-circle text-info"></i> No Medicines Found</td></tr>');
+                        $('tfoot').empty();
+                    } else {
+                        $('tfoot').html('<tr><td colspan="7" class="text-center text-muted" style="padding: 12px;">No More Results Found</td></tr>');
+                    }
+                } else {
+                    if (pageCount === 1) {
+                        $('#searchResult').empty();
+                    }
 
-                 </tbody>
-                 <tfoot class="tfoot">
-                     <tr>
-                         <!-- <td colspan=9></td> -->
-                     </tr>
-                 </tfoot>
-             </table>
-         </div>
-     </div>
-  </div>
-     </div> </div>
- <script>
-     var pageCount = 1;
+                    var perpage = 50;
+                    var counter = (pageCount - 1) * perpage + 1;
 
-     function search() {
-         if (pageCount == 1) {
-             $('#searchResult').html("<tr><td colspan=9>Searching Results...</td></tr>");
-         }
+                    $.each(objresp.result, function(k, v) {
+                        var tr = $('<tr/>');
+                        tr.append($('<td class="text-center text-muted" style="vertical-align: middle;"/>').text(counter));
+                        tr.append($('<td style="font-weight: 600; vertical-align: middle;"/>').text(v.medicine_name || '-'));
+                        tr.append($('<td style="vertical-align: middle;"/>').text(v.medicine_manufacturer || '-'));
+                        tr.append($('<td class="text-center" style="vertical-align: middle;"/>').text(v.medicine_unit || '1'));
 
-         $.post($('#searchform').attr("action") + "?page=" + pageCount, $('#searchform').serialize(), function(resp) {
-             var objresp = JSON.parse(resp);
+                        var stripVal = parseFloat(v.left_strip) || 0;
+                        var stripTd = $('<td class="text-center" style="vertical-align: middle;"/>');
+                        if (stripVal <= 0) {
+                            stripTd.append($('<span class="label label-danger" style="font-size: 12px; padding: 4px 10px; border-radius: 3px; display: inline-block; min-width: 36px;"/>').text(stripVal));
+                        } else if (stripVal <= 2) {
+                            stripTd.append($('<span class="label label-warning" style="font-size: 12px; padding: 4px 10px; border-radius: 3px; display: inline-block; min-width: 36px;"/>').text(stripVal));
+                        } else {
+                            stripTd.append($('<span class="label label-success" style="font-size: 12px; padding: 4px 10px; border-radius: 3px; display: inline-block; min-width: 36px;"/>').text(stripVal));
+                        }
+                        tr.append(stripTd);
 
-             // console.log(typeof objresp);
-             // console.log(objresp);
+                        var looseVal = parseFloat(v.left_loose) || 0;
+                        var looseTd = $('<td class="text-center" style="vertical-align: middle; font-weight: 600;"/>');
+                        if (looseVal < 0) {
+                            looseTd.append($('<span class="text-danger"/>').text(looseVal));
+                        } else if (looseVal > 0) {
+                            looseTd.append($('<span class="text-primary"/>').text(looseVal));
+                        } else {
+                            looseTd.append($('<span class="text-muted"/>').text('0'));
+                        }
+                        tr.append(looseTd);
 
-             if (objresp.status == "not found") {
+                        tr.append($('<td class="text-center text-muted" style="vertical-align: middle;"/>').text(v.medicine_storage || '-'));
 
-                 $('#searchResult').hide();
-                 $('tfoot').html("<tr><td colspan=9 class=\"coveo-result-row\">No Result Found</td></tr>");
-             } else {
-                 if (objresp.status == "found") {
-                     $('#excelexport').removeAttr('disabled');
-                 }
+                        $('#searchResult').append(tr);
+                        counter++;
+                    });
 
-                 if (pageCount == 1) {
-                     $('#searchResult').html("");
-                 }
-                 // console.log(objresp);
-                 if (objresp.result.length < 20) {
-                     $('tfoot').html("<tr><td colspan=9 class=\"coveo-result-row\"> No More Result Found </td></tr>");
-                 } else {
-                     $('tfoot').html("<tr><td colspan=9><button class='btn btn-block' onclick='search()' id='loadmore'>Load More</button></td></tr>");
-                 }
-                 //var perpage = objresp.count;
-                 var perpage = 50;
-                 if (pageCount == 1) {
-                     var counter = pageCount;
-                 } else {
-                     // $getper = localStorage.getItem("previousCount");
-                     // var counter = parseInt($getper);
+                    if (objresp.result.length < 50) {
+                        $('tfoot').html('<tr><td colspan="7" class="text-center text-muted" style="padding: 12px;">No More Results Found</td></tr>');
+                    } else {
+                        $('tfoot').html('<tr><td colspan="7" class="text-center" style="padding: 10px;"><button class="btn btn-default btn-block" style="font-weight: 600; background-color: #f8f9fa;" onclick="loadMore()"><i class="fa fa-arrow-down"></i> Load More Results</button></td></tr>');
+                    }
 
-                     var count = (pageCount - 1) * perpage;
-                     var counter = count + 1;
-                 }
+                    pageCount++;
+                }
+            },
+            error: function(xhr, status, err) {
+                isLoading = false;
+                console.error(err);
+                if (pageCount === 1) {
+                    $('#searchResult').html('<tr><td colspan="7" class="text-center text-danger" style="padding: 25px;"><i class="fa fa-exclamation-triangle"></i> Failed to load stock data. Please check your connection.</td></tr>');
+                }
+            }
+        });
+    }
 
-                 $.each(objresp.result, function(k, v) {
+    function loadMore() {
+        doSearch(false);
+    }
 
-                     var medicine_id = btoa(v.medicine_id);
+    $(document).ready(function() {
+        $('#amount_show').click(function() {
+            var $btn = $(this);
+            $btn.prop('disabled', true);
+            $('#wait_message').show();
 
-                     var tr_des = $("<tr/>");
+            $.ajax({
+                url: "<?= base_url() ?>console/medicine_stock/current_stock/",
+                type: "POST",
+                dataType: "json",
+                success: function(resp) {
+                    $('#wait_message').hide();
+                    $btn.prop('disabled', false);
+                    var obj = (typeof resp === 'string') ? JSON.parse(resp) : resp;
+                    if (obj && obj.status === "success") {
+                        var totalAmt = Number(obj.result).toLocaleString('en-IN', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        });
+                        $('#amount_val').text('₹ ' + totalAmt);
+                    } else {
+                        $('#amount_val').text('Unavailable');
+                    }
+                },
+                error: function() {
+                    $('#wait_message').hide();
+                    $btn.prop('disabled', false);
+                    $('#amount_val').text('Error fetching MRP');
+                }
+            });
+        });
 
-                     var count_td = $("<td/>").append(counter);
-                     $(tr_des).append(count_td);
+        $('#searchform').on('submit', function(e) {
+            e.preventDefault();
+            doSearch(true);
+        });
 
-                     var name_td = $("<td/>").append(v.medicine_name);
-                     $(tr_des).append(name_td);
+        $('#search').on('click', function() {
+            doSearch(true);
+        });
 
-                     var manufacturer_td = $("<td/>").append(v.medicine_manufacturer);
-                     $(tr_des).append(manufacturer_td);
+        $('#clear_search').on('click', function() {
+            $('#medicine_name').val('');
+            doSearch(true);
+        });
 
-                     var unit_td = $("<td/>").append(v.medicine_unit);
-                     $(tr_des).append(unit_td);
-
-                     if (v.left_strip < 3) {
-                         var stock_td = $('<td style="color: red"/>').append(v.left_strip);
-                         $(tr_des).append(stock_td);
-                     } else {
-                         var stock_td = $('<td/>').append(v.left_strip);
-                         $(tr_des).append(stock_td);
-                     }
-
-                     var loose_td = $("<td/>").append(v.left_loose);
-                     $(tr_des).append(loose_td);
-
-                     var storage_td = $("<td/>").append(v.medicine_storage);
-                     $(tr_des).append(storage_td);
-
-                     $('#searchResult').append(tr_des);
-
-                     counter++;
-                 })
-                 pageCount = pageCount + 1;
-             }
-         })
-     }
-
-     $(document).ready(function() {
-         $("#searchform").submit(function() {
-             pageCount = 1;
-             search();
-         });
-         $('#searchform').trigger(search());
-     });
- </script>
+        // Initial search load
+        doSearch(true);
+    });
+</script>

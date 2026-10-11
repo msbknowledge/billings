@@ -25,7 +25,7 @@ class Capabilities_model extends MY_Model {
   `capability_actions` text
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 
-        $this->db->query("INSERT INTO `capabilities` (`capability_id`, `capability_user_type`, `capability_controller`, `capability_actions`) VALUES
+$this->db->query("INSERT INTO `capabilities` (`capability_id`, `capability_user_type`, `capability_controller`, `capability_actions`) VALUES
 (1, 2, 'dashboard', '*'),
 (3, 2, 'capability', '*'),
 (4, 0, 'user', 'login,forgot_password'),

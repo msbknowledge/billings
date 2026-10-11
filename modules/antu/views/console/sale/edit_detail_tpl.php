@@ -430,63 +430,86 @@ $sale_note = $has_data ? trim($data[0]['sale_note']) : '';
             '<td><input required="required" type="text" readonly="readonly" name="sale_sgst[]" style="width:58px; background:#f8fafc;"></td>' +
             '<td><input required="required" type="text" readonly="readonly" name="sale_total[]" style="width:65px; font-weight:700; color:#059669; background:#f8fafc;"></td>' +
             '</tr>';
-        $('.appendHere').append(therow);
+        var $newRow = $(therow);
+        $('.appendHere').append($newRow);
+        bindRowAutocomplete($newRow);
+        $newRow.find('[name^="medicine_name[]"]').focus();
+    }
 
+    function bindRowAutocomplete(container) {
         <?php if (isset($this->page_config['autocomplete'])): ?>
             var autoComplete = $.parseJSON('<?= json_encode($this->page_config['autocomplete']); ?>');
             $.each(autoComplete, function (targetField, value) {
                 $.each(value, function (model, fieldToSearch) {
-                    $('.rowline').find('[name^="' + targetField + '[]"]').autocomplete({
+                    container.find('[name^="' + targetField + '[]"]').autocomplete({
                         source: '<?= base_url("search.php"); ?>?location=sale&table=' + model + '&fieldToSearch=' + fieldToSearch,
                         minLength: 1,
                         select: function (event, ui) {
                             var targetRow = $(this).parents('tr');
-                            $.each(ui.item.complete, function (populate_field, populate_value) {
-                                $(targetRow).find('[name^="' + populate_field + '[]"]').val('');
+                            var item = ui.item.complete || {};
+                            var medId = item.medicine_id || item.medicine_ID || ui.item.id;
 
-                                if (populate_field == 'medicine_name') {
-                                    $.get('<?= base_url("batch.php"); ?>?medicine_id=' + ui.item.complete.medicine_id, function (resp) {
-                                        var batchchooser = $('<datalist id="list_' + ui.item.complete.medicine_id + '"></datalist>');
+                            $(targetRow).find('[name^="medicine_id[]"]').val(medId);
+                            $(targetRow).find('[name^="medicine_name[]"]').val(item.medicine_name || ui.item.value);
+                            $(targetRow).find('[name^="medicine_storage[]"]').val(item.medicine_storage || '');
+                            $(targetRow).find('[name^="medicine_hsn[]"]').val(item.medicine_hsn || '');
+                            $(targetRow).find('[name^="medicine_unit[]"]').val(item.medicine_unit || '1');
+                            if (item.sale_discount_percent !== undefined) {
+                                $(targetRow).find('[name^="sale_discount_percent[]"]').val(item.sale_discount_percent);
+                            }
+                            if (item.sale_cgst_percent !== undefined) {
+                                $(targetRow).find('[name^="sale_cgst_percent[]"]').val(item.sale_cgst_percent);
+                            }
+                            if (item.sale_sgst_percent !== undefined) {
+                                $(targetRow).find('[name^="sale_sgst_percent[]"]').val(item.sale_sgst_percent);
+                            }
+
+                            if (medId) {
+                                $.get('<?= base_url("batch.php"); ?>?medicine_id=' + medId, function (resp) {
+                                    var batchchooser = $('<datalist id="list_' + medId + '"></datalist>');
+                                    if (resp && resp.length) {
                                         $.each(resp, function (k, v) {
                                             $(batchchooser).append($('<option value="' + v.value + '">' + v.label + '</option>'));
                                         });
-                                        $(targetRow).find('[name^="sale_batch[]"]').removeAttr('list');
-                                        $(targetRow).find('[name^="sale_batch[]"]').val('');
-                                        $(targetRow).find('[name^="sale_batch[]"]').parent().find('datalist').remove();
-                                        $(targetRow).find('[name^="sale_batch[]"]').parent().append(batchchooser);
-                                        $(targetRow).find('[name^="sale_batch[]"]').attr('list', 'list_' + ui.item.complete.medicine_id);
-                                    }, 'json');
-                                }
-                                $(targetRow).find('[name^="' + populate_field + '[]"]').val(populate_value);
-                            });
+                                    }
+                                    $(targetRow).find('[name^="sale_batch[]"]').removeAttr('list');
+                                    $(targetRow).find('[name^="sale_batch[]"]').val('');
+                                    $(targetRow).find('[name^="sale_batch[]"]').parent().find('datalist').remove();
+                                    $(targetRow).find('[name^="sale_batch[]"]').parent().append(batchchooser);
+                                    $(targetRow).find('[name^="sale_batch[]"]').attr('list', 'list_' + medId);
+                                }, 'json');
+                            }
 
-                            $(targetRow).find('[name^="sale_batch[]"]').change(function () {
+                            $(targetRow).find('[name^="sale_batch[]"]').off('change').on('change', function () {
                                 var row = $(this).parents('tr');
-                                $.post('<?= base_url("batch.php"); ?>?medicine_id=' + $(row).find('[name^="medicine_id[]"]').val() + '&term=' + $(this).val(), function (resp) {
+                                var rowMedId = $(row).find('[name^="medicine_id[]"]').val();
+                                $.post('<?= base_url("batch.php"); ?>?medicine_id=' + rowMedId + '&term=' + $(this).val(), function (resp) {
                                     if (resp && resp[0] && resp[0].complete) {
                                         $.each(resp[0].complete, function (populate_fieldx, populate_valuex) {
                                             $(row).find('[name^="' + populate_fieldx + '[]"]').val(populate_valuex);
-                                            calculate_the_sale($(row).find('[name^="sale_mrp[]"]'));
-                                            $(row).find('[name^="sale_discount_percent[]"]').focus().select();
                                         });
+                                        calculate_the_sale($(row).find('[name^="sale_mrp[]"]'));
+                                        $(row).find('[name^="sale_discount_percent[]"]').focus().select();
                                     }
                                 }, 'json');
                             });
 
-                            $(targetRow).find('[name^="sale_discount_percent[]"]').keydown(function (e) {
+                            $(targetRow).find('[name^="sale_discount_percent[]"]').off('keydown').on('keydown', function (e) {
                                 var keyCode = e.keyCode || e.which;
                                 if (keyCode == 9 && !e.shiftKey) {
                                     e.preventDefault();
                                     $('.addm').first().click();
                                 }
                             });
+
+                            setTimeout(function() {
+                                $(targetRow).find('[name^="sale_strip_quantity[]"]').focus().select();
+                            }, 50);
                         }
                     });
                 });
             });
         <?php endif; ?>
-
-        $('.appendHere tr:last [name^="medicine_name[]"]').focus();
     }
 
     function removeRow(targetObj) {
@@ -642,6 +665,7 @@ $sale_note = $has_data ? trim($data[0]['sale_note']) : '';
                 });
             });
         <?php endif; ?>
+        bindRowAutocomplete($('.rowline'));
 
         fullCalculation();
     });

@@ -16,7 +16,7 @@ if (!defined('BASEPATH'))
 class medicine_stock extends MY_Controller
 {
 
-    //put your code here
+    public $publicAccess = array('stock', 'current_stock', 'shortage', 'stock_sale_purchase_report');
 
     public function __construct()
     {
@@ -174,20 +174,23 @@ class medicine_stock extends MY_Controller
 
     public function stock()
     {
-        $medicineNname = $this->input->post("medicine_name");
-        $medicine_name = isset($medicineNname) ? $medicineNname : '';
+        $medicine_name = $this->input->post("medicine_name");
+        $medicine_name = !empty($medicine_name) ? trim($medicine_name) : '';
         $per_page = 50;
-        if (isset($_GET["page"])) {
-            $page = $_GET["page"];
-        } else {
+        $page = 1;
+        if (!empty($this->input->get("page"))) {
+            $page = intval($this->input->get("page"));
+        }
+        if ($page < 1) {
             $page = 1;
         }
         $start_from = ($page - 1) * $per_page;
-        $sql = "SELECT m.* FROM `medicines` m  WHERE 1=1";
+        $sql = "SELECT m.* FROM `medicines` m WHERE 1=1";
         if (!empty($medicine_name)) {
-            $sql .= " AND m.medicine_name like '%" . $medicine_name . "%'";
+            $sql .= " AND m.medicine_name LIKE '%" . $this->db->escape_like_str($medicine_name) . "%'";
         }
-        $sql .= " limit " . $start_from . "," . $per_page . "";
+        $sql .= " ORDER BY m.medicine_name ASC";
+        $sql .= " LIMIT " . $start_from . "," . $per_page;
         $data = $this->db->query($sql)->result_array();
 
         foreach ($data as $k => $v) {
@@ -195,34 +198,46 @@ class medicine_stock extends MY_Controller
             $data[$k]['left_strip'] = $stock['left_strip'];
             $data[$k]['left_loose'] = $stock['left_loose'];
         }
+        $res_data = array();
         if (count($data) > 0) {
-            echo json_encode(array("status" => "found", "result" => $data));
+            $res_data["status"] = "found";
+            $res_data["result"] = $data;
         } else {
-            echo json_encode(array("status" => "not found"));
+            $res_data["status"] = "not found";
+            $res_data["result"] = array();
         }
+        header('Content-Type: application/json');
+        echo json_encode($res_data);
+        exit;
     }
 
     public function current_stock()
     {
-       $sql = "SELECT m.medicine_id,p.purchase_mrp
+        $sql = "SELECT m.medicine_id, COALESCE(MAX(p.purchase_mrp), MAX(ms.medicine_mrp), 0) as purchase_mrp
         FROM medicines m 
-        JOIN purchases p ON m.medicine_id = p.purchase_medicine_id 
-        group by m.medicine_id, p.purchase_medicine_id";
+        LEFT JOIN purchases p ON m.medicine_id = p.purchase_medicine_id 
+        LEFT JOIN medicine_stocks ms ON m.medicine_id = ms.medicine_stock_medicine
+        WHERE p.purchase_medicine_id IS NOT NULL OR ms.medicine_stock_medicine IS NOT NULL
+        GROUP BY m.medicine_id";
         $medicine_data = $this->db->query($sql)->result_array();
         $total_amount = 0;
         foreach ($medicine_data as $k => $v) {
             $stock = $this->{$this->targetModel}->stock_of_medicine($v['medicine_id']);
-            $left_strip = $stock['left_strip'];
-            if ($left_strip == 0){
-                continue;
-            }
-            $total_amount += $v['purchase_mrp'] * $left_strip;
+            $left_strip = floatval($stock['left_strip']);
+            $left_loose = floatval($stock['left_loose']);
+            $unit = (!empty($stock['medicine_unit']) && $stock['medicine_unit'] > 0) ? floatval($stock['medicine_unit']) : 1;
+            $mrp = floatval($v['purchase_mrp']);
 
-            // $result = $this->db->query("SELECT SUM(purchase_mrp *  $left_strip) as totalamount FROM purchases WHERE purchase_medicine_id = '" . $v['medicine_id'] . "'")->result_array();
-            // $total_amount += $result[0]['totalamount'];
+            if ($left_strip > 0) {
+                $total_amount += $mrp * $left_strip;
+            }
+            if ($left_loose > 0 && $unit > 1) {
+                $total_amount += ($mrp / $unit) * $left_loose;
+            }
         }
-        echo json_encode(array("status" => "success", "result" => $total_amount));
-       // $this->load->view('console/medicine_stock/current_stock amount_tpl', array('total_amount' => $total_amount));
+        header('Content-Type: application/json');
+        echo json_encode(array("status" => "success", "result" => round($total_amount, 2)));
+        exit;
     }
 
     public function stock_amount()
@@ -265,6 +280,245 @@ class medicine_stock extends MY_Controller
         }else{
             $this->load->view('console/medicine_stock/stock_sales_statement_tpl', array());
         }
+    }
+
+    public function stock_sale_purchase_report()
+    {
+        if ($this->input->is_ajax_request() || !empty($this->input->get('ajax')) || !empty($this->input->get('export'))) {
+            $start_date = $this->input->get_post('start_date');
+            $end_date   = $this->input->get_post('end_date');
+            $search     = $this->input->get_post('search');
+            $stock_only = $this->input->get_post('stock_only');
+            $export     = $this->input->get_post('export');
+
+            $data = $this->get_stock_sale_purchase_data($start_date, $end_date, $search, ($stock_only === 'true' || $stock_only === '1' || $stock_only === 1));
+
+            if ($export === 'csv') {
+                $this->export_stock_sale_purchase_csv($data, $start_date, $end_date);
+                exit;
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode(array(
+                'status'  => 'success',
+                'summary' => $data['summary'],
+                'data'    => $data['items']
+            ));
+            exit;
+        }
+
+        $this->render(null, 'stock_sale_purchase_report_tpl');
+    }
+
+    private function get_stock_sale_purchase_data($start_date = null, $end_date = null, $search = null, $stock_only = false)
+    {
+        $where_p = "";
+        $where_s = "";
+        $where_sr = "";
+        $where_pr = "";
+
+        if (!empty($start_date)) {
+            $sd = $this->db->escape_str(trim($start_date));
+            $where_p .= " AND purchase_date >= '$sd'";
+            $where_s .= " AND DATE(sale_date) >= '$sd'";
+            $where_sr .= " AND return_sale_date >= '$sd'";
+            $where_pr .= " AND return_purchase_date >= '$sd'";
+        }
+        if (!empty($end_date)) {
+            $ed = $this->db->escape_str(trim($end_date));
+            $where_p .= " AND purchase_date <= '$ed'";
+            $where_s .= " AND DATE(sale_date) <= '$ed'";
+            $where_sr .= " AND return_sale_date <= '$ed'";
+            $where_pr .= " AND return_purchase_date <= '$ed'";
+        }
+
+        $where_med = "";
+        if (!empty($search)) {
+            $term = $this->db->escape_like_str(trim($search));
+            $where_med = " AND m.medicine_name LIKE '%$term%'";
+        }
+
+        $sql = "SELECT 
+            m.medicine_id,
+            m.medicine_name,
+            COALESCE(NULLIF(m.medicine_batch, ''), stk_batch.batch_no, '-') AS batch_no,
+            m.medicine_manufacturer,
+            m.medicine_unit,
+            COALESCE(latest_prices.sale_price, stk_price.mrp, 0) AS sale_price,
+            COALESCE(latest_prices.purchase_price, 0) AS purchase_price,
+            COALESCE(p.in_qty, 0) AS in_qty,
+            COALESCE(s.out_qty, 0) AS out_qty,
+            COALESCE(sr.sale_return_qty, 0) AS sale_return_qty,
+            COALESCE(pr.purchase_return_qty, 0) AS purchase_return_qty,
+            COALESCE(stk.stock_qty, (COALESCE(p_all.total_in, 0) - COALESCE(s_all.total_out, 0) + COALESCE(sr_all.total_sr, 0) - COALESCE(pr_all.total_pr, 0))) AS current_stock
+        FROM medicines m
+        LEFT JOIN (
+            SELECT medicine_stock_medicine, GROUP_CONCAT(DISTINCT medicine_stock_batch SEPARATOR ', ') AS batch_no
+            FROM medicine_stocks WHERE medicine_stock_batch IS NOT NULL AND medicine_stock_batch != ''
+            GROUP BY medicine_stock_medicine
+        ) stk_batch ON m.medicine_id = stk_batch.medicine_stock_medicine
+        LEFT JOIN (
+            SELECT purchase_medicine_id, SUM(purchase_quantity + purchase_free_quantity) AS in_qty
+            FROM purchases WHERE 1=1 $where_p GROUP BY purchase_medicine_id
+        ) p ON m.medicine_id = p.purchase_medicine_id
+        LEFT JOIN (
+            SELECT sale_medicine_id, SUM(sale_strip_quantity) AS out_qty
+            FROM sales WHERE sale_return = 0 $where_s GROUP BY sale_medicine_id
+        ) s ON m.medicine_id = s.sale_medicine_id
+        LEFT JOIN (
+            SELECT return_sale_medicine_id, SUM(return_sale_strip) AS sale_return_qty
+            FROM returns_sales WHERE 1=1 $where_sr GROUP BY return_sale_medicine_id
+        ) sr ON m.medicine_id = sr.return_sale_medicine_id
+        LEFT JOIN (
+            SELECT return_purchase_medicine_id, SUM(return_purchase_strip) AS purchase_return_qty
+            FROM return_purchases WHERE 1=1 $where_pr GROUP BY return_purchase_medicine_id
+        ) pr ON m.medicine_id = pr.return_purchase_medicine_id
+        LEFT JOIN (
+            SELECT medicine_stock_medicine, SUM(medicine_strip_stock) AS stock_qty
+            FROM medicine_stocks GROUP BY medicine_stock_medicine
+        ) stk ON m.medicine_id = stk.medicine_stock_medicine
+        LEFT JOIN (
+            SELECT purchase_medicine_id, SUM(purchase_quantity + purchase_free_quantity) AS total_in 
+            FROM purchases GROUP BY purchase_medicine_id
+        ) p_all ON m.medicine_id = p_all.purchase_medicine_id
+        LEFT JOIN (
+            SELECT sale_medicine_id, SUM(sale_strip_quantity) AS total_out 
+            FROM sales WHERE sale_return = 0 GROUP BY sale_medicine_id
+        ) s_all ON m.medicine_id = s_all.sale_medicine_id
+        LEFT JOIN (
+            SELECT return_sale_medicine_id, SUM(return_sale_strip) AS total_sr 
+            FROM returns_sales GROUP BY return_sale_medicine_id
+        ) sr_all ON m.medicine_id = sr_all.return_sale_medicine_id
+        LEFT JOIN (
+            SELECT return_purchase_medicine_id, SUM(return_purchase_strip) AS total_pr 
+            FROM return_purchases GROUP BY return_purchase_medicine_id
+        ) pr_all ON m.medicine_id = pr_all.return_purchase_medicine_id
+        LEFT JOIN (
+            SELECT p1.purchase_medicine_id, p1.purchase_mrp AS sale_price, p1.purchase_rate AS purchase_price
+            FROM purchases p1
+            INNER JOIN (
+                SELECT purchase_medicine_id, MAX(purchase_ID) AS max_id 
+                FROM purchases GROUP BY purchase_medicine_id
+            ) p2 ON p1.purchase_ID = p2.max_id
+        ) latest_prices ON m.medicine_id = latest_prices.purchase_medicine_id
+        LEFT JOIN (
+            SELECT medicine_stock_medicine, MAX(medicine_mrp) AS mrp 
+            FROM medicine_stocks GROUP BY medicine_stock_medicine
+        ) stk_price ON m.medicine_id = stk_price.medicine_stock_medicine
+        WHERE 1=1 $where_med
+          AND (p.in_qty > 0 OR s.out_qty > 0 OR stk.stock_qty > 0 OR sr.sale_return_qty > 0 OR pr.purchase_return_qty > 0 OR p_all.total_in > 0)
+        ORDER BY m.medicine_name ASC";
+
+        $rows = $this->db->query($sql)->result_array();
+
+        $items = array();
+        $total_in = 0;
+        $total_out = 0;
+        $total_sale_return = 0;
+        $total_purchase_return = 0;
+        $total_stock = 0;
+        $total_stock_sale_price = 0;
+        $total_stock_purchase_price = 0;
+
+        foreach ($rows as $row) {
+            $stock = floatval($row['current_stock']);
+            if ($stock_only && $stock <= 0) {
+                continue;
+            }
+
+            $sale_price     = floatval($row['sale_price']);
+            $purchase_price = floatval($row['purchase_price']);
+            $in_qty         = floatval($row['in_qty']);
+            $out_qty        = floatval($row['out_qty']);
+            $sale_return    = floatval($row['sale_return_qty']);
+            $purchase_return= floatval($row['purchase_return_qty']);
+
+            $stock_sale_val     = round($stock * $sale_price, 2);
+            $stock_purchase_val = round($stock * $purchase_price, 2);
+
+            $items[] = array(
+                'medicine_id'          => $row['medicine_id'],
+                'medicine_name'        => $row['medicine_name'],
+                'batch_no'             => !empty($row['batch_no']) ? $row['batch_no'] : '-',
+                'sale_price'           => number_format($sale_price, 2, '.', ''),
+                'purchase_price'       => number_format($purchase_price, 2, '.', ''),
+                'in_qty'               => $in_qty,
+                'out_qty'              => $out_qty,
+                'sale_return'          => $sale_return,
+                'purchase_return'      => $purchase_return,
+                'stock'                => $stock,
+                'stock_sale_price'     => number_format($stock_sale_val, 2, '.', ''),
+                'stock_purchase_price' => number_format($stock_purchase_val, 2, '.', '')
+            );
+
+            $total_in                   += $in_qty;
+            $total_out                  += $out_qty;
+            $total_sale_return          += $sale_return;
+            $total_purchase_return      += $purchase_return;
+            $total_stock                += $stock;
+            $total_stock_sale_price     += $stock_sale_val;
+            $total_stock_purchase_price += $stock_purchase_val;
+        }
+
+        $summary = array(
+            'total_medicines'            => count($items),
+            'total_in'                   => $total_in,
+            'total_out'                  => $total_out,
+            'total_sale_return'          => $total_sale_return,
+            'total_purchase_return'      => $total_purchase_return,
+            'total_stock'                => $total_stock,
+            'total_stock_sale_price'     => number_format($total_stock_sale_price, 2, '.', ''),
+            'total_stock_purchase_price' => number_format($total_stock_purchase_price, 2, '.', '')
+        );
+
+        return array('items' => $items, 'summary' => $summary);
+    }
+
+    private function export_stock_sale_purchase_csv($data, $start_date = '', $end_date = '')
+    {
+        $filename = 'Stock_Sale_Purchase_Report_' . date('Ymd_His') . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=' . $filename);
+        $output = fopen('php://output', 'w');
+
+        // CSV Header with exact requested column names including Batch No
+        fputcsv($output, array('SL No.', 'Medicine Name', 'Batch No', 'Sale Price', 'Purchase Price', 'In Qnty.', 'Out Qnty.', 'Sale Return', 'Purchase Return', 'Stock', 'Stock Sale Price', 'Stock Purchase Price'));
+
+        $sl = 1;
+        foreach ($data['items'] as $item) {
+            fputcsv($output, array(
+                $sl++,
+                $item['medicine_name'],
+                $item['batch_no'],
+                $item['sale_price'],
+                $item['purchase_price'],
+                $item['in_qty'],
+                $item['out_qty'],
+                $item['sale_return'],
+                $item['purchase_return'],
+                $item['stock'],
+                $item['stock_sale_price'],
+                $item['stock_purchase_price']
+            ));
+        }
+
+        // Totals Row
+        fputcsv($output, array(
+            'Total',
+            $data['summary']['total_medicines'] . ' Items',
+            '',
+            '',
+            '',
+            $data['summary']['total_in'],
+            $data['summary']['total_out'],
+            $data['summary']['total_sale_return'],
+            $data['summary']['total_purchase_return'],
+            $data['summary']['total_stock'],
+            $data['summary']['total_stock_sale_price'],
+            $data['summary']['total_stock_purchase_price']
+        ));
+
+        fclose($output);
     }
 
     public function stock_by_batch()

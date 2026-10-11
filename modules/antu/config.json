@@ -279,6 +279,17 @@
             "user_type_name": "admin"
         },
         {
+            "menu_ID": "stock_sale_purchase_report",
+            "menu_name": "Stock Sale Purchase Report",
+            "menu_parent_id": "medicine_report",
+            "menu_link": "medicine_stock/stock_sale_purchase_report",
+            "menu_hint": "Stock Sale Purchase Movement Report",
+            "menu_icon_class": "icon icon-black icon-calendar",
+            "menu_user_type_id": 2,
+            "user_type_ID": 2,
+            "user_type_name": "admin"
+        },
+        {
             "menu_ID": "medicine history",
             "menu_name": "Medicine History",
             "menu_parent_id": "medicine_report",

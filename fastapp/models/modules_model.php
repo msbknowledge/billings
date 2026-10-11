@@ -20,7 +20,7 @@ class Modules_model extends MY_Model {
  public function install() {
        $this->db->query("CREATE TABLE `modules` (
   `module_ID` int(11) NOT NULL,
-  `module_name` varchar(50) NOT NULL,
+  `module_name` varchar(255) NOT NULL,
   `module_status` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;");
 

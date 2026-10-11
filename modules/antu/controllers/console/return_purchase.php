@@ -80,6 +80,17 @@ class Return_purchase extends MY_Controller {
             // die();
             // pr($return_purchase, 1);
             $data = $this->return_purchase_model->insert_data($return_purchase, true);
+            if (!empty($return_purchase)) {
+                foreach ($return_purchase as $rpItem) {
+                    medicine_stock_update(
+                        $rpItem['return_purchase_Batch'],
+                        $rpItem['return_purchase_medicine_id'],
+                        $rpItem['return_purchase_strip'],
+                        0,
+                        '-'
+                    );
+                }
+            }
             increase_expiry_number();
             $supplier_data = $this->suppliers_model->get_list();
             $this->render(array('return_purchase_type'=>$this->page_config['use_dropdown_columns_options']['return_purchase_type'],'supplier' => $supplier_data, 'status' => 'success', 'message' => '<strong>Well done!</strong> Data Save.'), 'add_detail');

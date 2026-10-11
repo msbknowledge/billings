@@ -188,9 +188,9 @@ class medicine_stocks_model extends MY_Model
 
     public function stock_of_medicine($medicine_id, $medicine_batch = "")
     {
-
         $medicine = $this->medicines_model->get_list(array("medicine_ID" => $medicine_id));
-        $data['medicine_unit'] = $medicine[0]['medicine_unit'];
+        $unit = (!empty($medicine[0]['medicine_unit']) && floatval($medicine[0]['medicine_unit']) > 0) ? floatval($medicine[0]['medicine_unit']) : 1;
+        $data['medicine_unit'] = $unit;
 
         $data['purchase_stock'] = $this->purchase_stock_count($medicine_id, $medicine_batch);
         $data['purchase_return_stock'] = $this->purchase_return_stock_count($medicine_id, $medicine_batch);
@@ -200,27 +200,30 @@ class medicine_stocks_model extends MY_Model
 
         $data['balance_stock'] = $this->balance_stock_count($medicine_id, $medicine_batch);
 
-        $data['left_strip'] =
-            floatval($data['purchase_stock']['purchase_stock']) -
-            floatval($data['sold_stock']['soled_strip']) -
-            floatval($data['purchase_return_stock']['return_purchase_stock']) +
-            floatval($data['sold_return_stock']['return_sale_stock']) +
-            floatval($data['balance_stock']['balanced_strip']);
-        $balanced_loose = 0 + floatval($data['balance_stock']['balanced_loose']) - floatval($data['sold_stock']['soled_loose']);
-        $looseLeft = 0;
-        if ($balanced_loose > 0) {
-            $fromStrip = ceil($balanced_loose / floatval($medicine[0]['medicine_unit']));
-            $looseLeft =   ($fromStrip * floatval($medicine[0]['medicine_unit'])) - $balanced_loose;
-        }
-        if ($balanced_loose < 0) {
-            $fromStrip = floor($balanced_loose / floatval($medicine[0]['medicine_unit']));
-            $looseLeft =  $balanced_loose -  ($fromStrip * floatval($medicine[0]['medicine_unit']));
-        }
-        $data['left_strip']  += $fromStrip;
-        $data['left_loose'] = $looseLeft;
+        if ($data['balance_stock']['balanced_strip'] !== null || $data['balance_stock']['balanced_loose'] !== null) {
+            $data['left_strip'] = floatval($data['balance_stock']['balanced_strip']);
+            $data['left_loose'] = floatval($data['balance_stock']['balanced_loose']);
+        } else {
+            $strip_stock =
+                floatval($data['purchase_stock']['purchase_stock']) -
+                floatval($data['sold_stock']['soled_strip']) -
+                floatval($data['purchase_return_stock']['return_purchase_stock']) +
+                floatval($data['sold_return_stock']['return_sale_stock']);
+            $balanced_loose = 0 - floatval($data['sold_stock']['soled_loose']);
 
+            $looseLeft = 0;
+            $fromStrip = 0;
+            if ($unit > 1) {
+                $fromStrip = floor($balanced_loose / $unit);
+                $looseLeft = $balanced_loose - ($fromStrip * $unit);
+            } else {
+                $fromStrip = $balanced_loose;
+                $looseLeft = 0;
+            }
 
-        //	echo json_encode($data);
+            $data['left_strip'] = $strip_stock + $fromStrip;
+            $data['left_loose'] = $looseLeft;
+        }
 
         return $data;
     }

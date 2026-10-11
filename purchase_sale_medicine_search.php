@@ -11,12 +11,7 @@ header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-$nodeSegment = explode('.', $_SERVER['SERVER_NAME']);
-$node = 'u404684354_'.$nodeSegment[0];
-define('DB_SERVER', 'localhost');
-define('DB_USER',$node);
-define('DB_PASSWORD', 'BR66MK55@msb');
-define('DB_NAME', $node);
+require_once __DIR__ . '/db_config.php';
 $medicine_unit = 0;
 if (isset($_GET['term'])) {
   $return_arr = array();
@@ -168,9 +163,9 @@ if ($balanced_loose < 0) {
     <td><?= $sale_loose_qty ?></td>
   </tr>
   <tr class="update">
-    <td>Adjusted Strip</td>
+    <td>Stock in Hand</td>
     <td><?= $medicine_stock_total ?> </td>
-    <td>Adjusted loose</td>
+    <td>Loose in Hand</td>
     <td><?= $medicine_stock_loose_total ?></td>
   </tr>
   <tr>
@@ -182,9 +177,9 @@ if ($balanced_loose < 0) {
   <tr class="total">
     <td colspan=4>
 
-      <h1>Total Stock: <?php echo  ($purchase_total + $purchase_free_total - $sale_total + $medicine_stock_total - $return_purchase_total + $return_sale_total + $fromStrip); ?>
+      <h1>Total Stock: <?php echo ($medicine_stock_total !== 0 || $medicine_stock_loose_total !== 0) ? $medicine_stock_total : ($purchase_total + $purchase_free_total - $sale_total - $return_purchase_total + $return_sale_total + $fromStrip); ?>
         &nbsp; &nbsp;&nbsp;
-        Loose: Approx (<?= $looseLeft ?>) pc</h1>
+        Loose: Approx (<?= $medicine_stock_loose_total ?>) pc</h1>
     </td>
   </tr>
 </table>

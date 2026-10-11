@@ -214,7 +214,7 @@ class Payments extends MY_Controller {
             // pr($alldata, 1);   
             $this->load->view('console/payment/due_ajax_report_tpl', array('alldata' => $alldata,  'start' => $start, 'end' => $end, ));
         } else {
-            $this->load->view('console/payment/due_report_tpl', array('alldata' => $alldata, 'start' => $start, 'end' => $end, ));
+            $this->render(array('alldata' => $alldata, 'start' => $start, 'end' => $end, 'page_title' => 'Due Report Sheet', 'active_report' => 'due_report'), 'due_report_tpl');
         }
     }
 

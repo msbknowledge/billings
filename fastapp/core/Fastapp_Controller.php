@@ -28,14 +28,29 @@ class Fastapp_Controller extends CI_Controller {
         $this->load_module_packages();
     }
 
+
     private function initilise() {
         /** populate basic site settings ans user data to application wise */
         $this->current_user_session = $this->session->userdata('current_user_session');
+
+        // Refresh user_type_super from DB on each request to prevent stale session exploits
+        if (!empty($this->current_user_session['user_type_id'])) {
+            $freshType = $this->db
+                ->select('user_type_super')
+                ->where('user_type_ID', $this->current_user_session['user_type_id'])
+                ->get('user_types')
+                ->row_array();
+            if ($freshType) {
+                $this->current_user_session['user_type_super'] = $freshType['user_type_super'];
+            }
+        }
+
         //$this->allowed_action = array('add_detail', 'edit_detail', 'delete', 'view_detail', 'quick_edit');
         $this->allowed_action = array('add_detail', 'edit_detail', 'delete', 'view_detail', '');
         $this->current_site_settings = $this->get_site_setting();
         $this->targetModel = $this->uri->segment(2) . 's_model';
     }
+
 
     /**
      * autoload module active module packages
@@ -53,6 +68,7 @@ class Fastapp_Controller extends CI_Controller {
         
         //pr($modules);
         foreach ($modules as $moduleMeta) {
+            if (!is_dir(ROOTPATH . "modules/" . $moduleMeta)) continue;
             /*             * load the package */
             $this->load->add_package_path(ROOTPATH . "modules/" . $moduleMeta . '/');
 
@@ -128,14 +144,51 @@ class Fastapp_Controller extends CI_Controller {
      * only for console capability check    
      *  */
     private function is_capabale() {
-        if ($this->current_user_session['user_type_super'] == 1) {
+        // Super Admin bypass — full access
+        if (!empty($this->current_user_session['user_type_super'])
+            || (isset($this->current_user_session['user_type_id']) && $this->current_user_session['user_type_id'] == 1)
+        ) {
             return true;
         }
+
         $controller = empty($this->uri->segment(2)) ? 'dashboard' : $this->uri->segment(2);
+        $action     = isset($this->uri->segments[3]) ? $this->uri->segments[3] : (isset($this->uri->rsegments[2]) ? $this->uri->rsegments[2] : '');
+
+        // Always allow login/logout/profile/captcha for all users regardless of controller
+        $alwaysAllowedActions = array('login', 'logout', 'profile', 'captcha_check', 'refresh_captcha');
+        if (in_array($action, $alwaysAllowedActions) || $controller === 'dashboard') {
+            return true;
+        }
+
+        // Controllers where CRUD is restricted to Super Admin only
+        $superAdminOnlyControllers = array(
+            'user_type', 'capability', 'permission',
+            'menu', 'module', 'option', 'frontend_settings',
+            'language', 'region', 'region_language', 'translation',
+        );
+
+        // 'user' controller: allow login/logout (above), block data actions for non-super
+        $superAdminOnlyUserActions = array('index', 'add_detail', 'edit_detail', 'delete', 'view_detail', 'quick_edit');
+        if ($controller === 'user' && (in_array($action, $superAdminOnlyUserActions) || $action === '')) {
+            if (isset($this->uri->segments[1]) && $this->uri->segments[1] == 'console') {
+                $message = '<script>window.location="' . console_url() . 'dashboard"</script>Please Wait...';
+                show_error($message, '403', 'Access Restricted: Super Admin Only');
+                return FALSE;
+            }
+        }
+
+        if (isset($this->uri->segments[1]) && $this->uri->segments[1] == 'console') {
+            if (in_array($controller, $superAdminOnlyControllers)) {
+                $message = '<script>window.location="' . console_url() . 'dashboard"</script>Please Wait...';
+                show_error($message, '403', 'Access Restricted: Super Admin Only');
+                return FALSE;
+            }
+        }
+
         $capability_list = json_decode(get_option('capability_' . $controller), true);
         $this->allowed_action = array_keys($capability_list['capability'][$controller][$this->current_user_session['user_type_id']]);
         if (isset($this->uri->segments[1]) && $this->uri->segments[1] == 'console') {
-            $verify_capable_action = isset($this->uri->segments[3]) ? $this->uri->segments[3] : $this->uri->rsegments[2];
+            $verify_capable_action = $action;
 
             if (in_array($verify_capable_action, $this->publicAccess)) {
                 return true;
@@ -143,12 +196,15 @@ class Fastapp_Controller extends CI_Controller {
 
             if ($verify_capable_action == 'capability_list')
                 return true;
+
             if ($capability_list['capability'][$controller][$this->current_user_session['user_type_id']][$verify_capable_action] == 'true') {
+                return TRUE;
+            }
+            if ($controller == "dashboard" || $verify_capable_action == "login" || $verify_capable_action == "logout") {
                 return TRUE;
             }
             $message = '<script>window.location="' . console_url() . 'user/login"</script>Please Wait...';
             show_error($message, '403', 'Not Authorised!! Please wait...');
-
             return FALSE;
         } else {
             return TRUE;
@@ -194,9 +250,46 @@ class Fastapp_Controller extends CI_Controller {
     }
 
     public function get_modules() {
-        //$moduleMeta = $this->modules_model->get_list_for_dropdown('module_name', array('module_status' => 1));
-        $moduleMeta = explode(',',PLAN_PACKAGES);
-        return $moduleMeta;
+        $activeModules = array();
+
+        // 1. Fetch active modules from database `modules` table where module_status = 1
+        if (isset($this->db)) {
+            $query = $this->db->select('module_name')->where('module_status', 1)->get('modules');
+            if ($query && $query->num_rows() > 0) {
+                foreach ($query->result_array() as $m) {
+                    if (!empty($m['module_name'])) {
+                        $raw = trim($m['module_name']);
+                        $dec = json_decode($raw, true);
+                        if (is_array($dec)) {
+                            foreach ($dec as $item) {
+                                $item = trim($item);
+                                if (!empty($item)) $activeModules[] = $item;
+                            }
+                        } else {
+                            $activeModules[] = $raw;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Also merge any modules defined in PLAN_PACKAGES if set
+        if (defined('PLAN_PACKAGES') && !empty(PLAN_PACKAGES)) {
+            $planModules = json_decode(PLAN_PACKAGES, true);
+            if (!is_array($planModules)) {
+                $planModules = explode(',', PLAN_PACKAGES);
+            }
+            if (is_array($planModules)) {
+                foreach ($planModules as $pm) {
+                    $pm = trim($pm);
+                    if (!empty($pm) && !in_array($pm, $activeModules)) {
+                        $activeModules[] = $pm;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($activeModules));
     }
 
     public function excel_convert() {
@@ -604,68 +697,130 @@ class Fastapp_Controller extends CI_Controller {
 
     protected function menu_generater() {
 
-        $result_array = null;
-        if (file_exists(ROOTPATH . 'fastapp/cachefiles/' . NODE . '/menu_cache.txt')) {
-            $result_array = json_decode(file_get_contents(ROOTPATH . 'fastapp/cachefiles/' . NODE . '/menu_cache.txt'), true);
-            return $result_array;
+        // Determine if current user is Super Admin
+        $isSuperAdmin = !empty($this->current_user_session['user_type_super'])
+            || (isset($this->current_user_session['user_type_id']) && $this->current_user_session['user_type_id'] == 1);
+
+        $userTypeId = isset($this->current_user_session['user_type_id'])
+            ? intval($this->current_user_session['user_type_id']) : 0;
+
+        // Role-specific cache file
+        $cacheDir  = ROOTPATH . 'fastapp/cachefiles/' . NODE;
+        $cacheFile = $cacheDir . '/menu_cache_' . ($isSuperAdmin ? 'super' : $userTypeId) . '.txt';
+
+        if (file_exists($cacheFile)) {
+            return json_decode(file_get_contents($cacheFile), true);
+        }
+
+        // --- Build menu from DB (SELECT * FROM menus) ---
+        $processedMenu = array();
+
+        if ($isSuperAdmin) {
+            $topMenus = $this->menus_model->get_list_for_dropdown(false, array(
+                'menu_parent_id'    => '0',
+                'menu_user_type_id'=> 1,
+            ));
         } else {
-            $isSuperAdmin = !empty($this->current_user_session['user_type_super']) || (isset($this->current_user_session['user_type_id']) && $this->current_user_session['user_type_id'] == 1);
-            $condition = array('menu_parent_id' => '0');
-            if (isset($this->current_user_session['user_ID']) && !$isSuperAdmin) {
-                $condition['menu_user_type_id'] = $this->current_user_session['user_type_id'];
-            }
+            $topMenus = $this->menus_model->get_list_for_dropdown(false, array(
+                'menu_parent_id'    => '0',
+                'menu_user_type_id' => $userTypeId,
+            ));
+        }
 
-            $menu = $this->menus_model->get_list_for_dropdown(false, $condition);
-            $processedMenu = array();
+        if (is_array($topMenus)) {
+            foreach ($topMenus as $key => $value) {
+                if (!is_array($value) || !isset($value['menu_ID'])) continue;
+                $processedMenu[$key] = $value;
 
-            if (is_array($menu)) {
-                foreach ($menu as $key => $value) {
-                    if (!is_array($value) || !isset($value['menu_ID'])) {
-                        continue;
-                    }
-                    $processedMenu[$key] = $value;
-                    $subCondition = array('menu_parent_id' => $value['menu_ID']);
-                    if (isset($this->current_user_session['user_ID']) && !$isSuperAdmin) {
-                        $subCondition['menu_user_type_id'] = $this->current_user_session['user_type_id'];
-                    }
-                    $subMenu = $this->menus_model->get_list_for_dropdown(false, $subCondition);
+                if ($isSuperAdmin) {
+                    $subMenu = $this->menus_model->get_list_for_dropdown(false, array('menu_parent_id' => $value['menu_ID']));
+                } else {
+                    $subMenu = $this->menus_model->get_list_for_dropdown(false, array(
+                        'menu_parent_id'    => $value['menu_ID'],
+                        'menu_user_type_id' => $userTypeId,
+                    ));
+                }
 
-                    if (is_array($subMenu)) {
-                        foreach ($subMenu as $skey => $svalue) {
-                            if (is_array($svalue)) {
-                                $processedMenu[$skey] = $svalue;
-                            }
+                if (is_array($subMenu)) {
+                    foreach ($subMenu as $skey => $svalue) {
+                        if (is_array($svalue) && isset($svalue['menu_ID'])) {
+                            $processedMenu[$skey] = $svalue;
                         }
                     }
                 }
             }
+        }
 
-            $moduleMenu = NULL;
-            $moduleMenuList = array();
+        // --- Merge module menus from config.json (only for entries NOT already in DB) ---
+        // Build lookup of DB menus by link and name to avoid duplicates (DB uses integer IDs, config.json uses string IDs).
+        $dbMenuLinks = array();
+        $dbMenuNames = array();
+        foreach ($processedMenu as $dbItem) {
+            if (!empty($dbItem['menu_link'])) {
+                $dbMenuLinks[strtolower(trim($dbItem['menu_link']))] = true;
+            }
+            if (!empty($dbItem['menu_name'])) {
+                $dbMenuNames[strtolower(trim($dbItem['menu_name']))] = true;
+            }
+        }
+
+        $moduleMenuList = array();
+        // If DB has no menus at all, just pull everything from config.json (fallback mode).
+        if (empty($processedMenu)) {
             $moduleMeta = $this->get_modules();
             if ($moduleMeta) {
                 foreach ($moduleMeta as $moduleData) {
                     $configFile = ROOTPATH . 'modules/' . $moduleData . '/config.json';
-                    if (file_exists($configFile)) {
-                        $moduleMenu = json_decode(read_file($configFile), TRUE);
-                        if (isset($moduleMenu['menu']) && is_array($moduleMenu['menu'])) {
-                            foreach ($moduleMenu['menu'] as $value) {
-                                if (isset($value['menu_ID'])) {
-                                    $moduleMenuList[$value['menu_ID']] = $value;
-                                }
+                    if (!file_exists($configFile)) continue;
+                    $moduleMenu = json_decode(read_file($configFile), true);
+                    if (isset($moduleMenu['menu']) && is_array($moduleMenu['menu'])) {
+                        foreach ($moduleMenu['menu'] as $mItem) {
+                            if (!isset($mItem['menu_ID'])) continue;
+                            if ($isSuperAdmin) {
+                                $moduleMenuList[$mItem['menu_ID']] = $mItem;
+                            } elseif (!isset($mItem['menu_user_type_id']) || intval($mItem['menu_user_type_id']) == $userTypeId) {
+                                $moduleMenuList[$mItem['menu_ID']] = $mItem;
                             }
                         }
                     }
                 }
             }
-
-            $cacheDir = ROOTPATH . 'fastapp/cachefiles/' . NODE;
-            if (!is_dir($cacheDir)) {
-                @mkdir($cacheDir, 0777, true);
+        } else {
+            // DB has menus – add only those config.json items that are truly missing.
+            $moduleMeta = $this->get_modules();
+            if ($moduleMeta) {
+                foreach ($moduleMeta as $moduleData) {
+                    $configFile = ROOTPATH . 'modules/' . $moduleData . '/config.json';
+                    if (!file_exists($configFile)) continue;
+                    $moduleMenu = json_decode(read_file($configFile), true);
+                    if (isset($moduleMenu['menu']) && is_array($moduleMenu['menu'])) {
+                        foreach ($moduleMenu['menu'] as $mItem) {
+                            if (!isset($mItem['menu_ID'])) continue;
+                            // Skip if DB already has a menu with same link or name.
+                            $mLink = strtolower(trim(isset($mItem['menu_link']) ? $mItem['menu_link'] : ''));
+                            $mName = strtolower(trim(isset($mItem['menu_name']) ? $mItem['menu_name'] : ''));
+                            if ($mLink !== '' && isset($dbMenuLinks[$mLink])) continue;
+                            if ($mName !== '' && isset($dbMenuNames[$mName])) continue;
+                            if (isset($processedMenu[$mItem['menu_ID']])) continue;
+                            if ($isSuperAdmin) {
+                                $moduleMenuList[$mItem['menu_ID']] = $mItem;
+                            } elseif (!isset($mItem['menu_user_type_id']) || intval($mItem['menu_user_type_id']) == $userTypeId) {
+                                $moduleMenuList[$mItem['menu_ID']] = $mItem;
+                            }
+                        }
+                    }
+                }
             }
-            file_put_contents($cacheDir . '/menu_cache.txt', json_encode($moduleMenuList + $processedMenu));
-            return $moduleMenuList + $processedMenu;
         }
+
+        $finalMenu = $moduleMenuList + $processedMenu;
+
+        if (!is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0777, true);
+        }
+        file_put_contents($cacheFile, json_encode($finalMenu));
+
+        return $finalMenu;
     }
 
     /*
@@ -860,10 +1015,44 @@ class Fastapp_Controller extends CI_Controller {
 
     private function show_error_page($code = null, $message = null) {
         if ($this->uri->segment(1) == 'console') {
-            $message = '<script>window.location="' . console_url() . 'user/login"</script>Please Wait...';
-            show_error($message, $code, 'Oops!! Please wait...');
+            if ($code == 403) {
+                $msgText = !empty($message) ? $message : 'Permission Denied: You do not have permission to access this page.';
+                $redirectUrl = isset($this->current_user_session['user_ID']) ? console_url() . 'dashboard' : console_url() . 'user/login';
+
+                if ($this->input->is_ajax_request()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(array('status' => 'error', 'message' => $msgText));
+                    exit();
+                }
+
+                $msgBody = '<div style="padding: 20px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Arial, sans-serif;">'
+                    . '<p style="font-size: 16px; color: #a94442; background-color: #f2dede; border: 1px solid #ebccd1; border-radius: 4px; padding: 15px; margin-bottom: 20px;">'
+                    . '<strong>&#9888; Permission Denied:</strong> ' . htmlspecialchars($msgText)
+                    . '</p>'
+                    . '<p style="color: #666; font-size: 14px;">'
+                    . 'Redirecting to Dashboard in 3 seconds... '
+                    . '<a href="' . $redirectUrl . '" style="color: #337ab7; text-decoration: underline; font-weight: bold;">Click here if not redirected automatically</a>'
+                    . '</p>'
+                    . '<script>setTimeout(function(){ window.location="' . $redirectUrl . '"; }, 3000);</script>'
+                    . '</div>';
+
+                show_error($msgBody, 403, 'Access Denied: Permission Required');
+                return;
+            }
+
+            if ($code == 401) {
+                $redirectUrl = console_url() . 'user/login';
+                $msgText = !empty($message) ? $message : 'Please login to continue.';
+                $msgBody = '<script>window.location="' . $redirectUrl . '"</script>' . $msgText;
+                show_error($msgBody, 401, 'Please Login');
+                return;
+            }
+
+            $msgBody = (!empty($message) ? $message : 'Please wait...') . '<script>setTimeout(function(){ window.location="' . console_url() . 'dashboard"; }, 2000);</script>';
+            show_error($msgBody, $code, 'Notice');
         } else {
-            $message = $code . ': Content is not available..please wait, while we are redirecting.<script>window.location="' . base_url() . '"</script>';
+            $msgText = !empty($message) ? $message : 'Content is not available..please wait, while we are redirecting.';
+            $message = $code . ': ' . $msgText . '<script>setTimeout(function(){ window.location="' . base_url() . '"; }, 2000);</script>';
             show_error($message, $code, 'Oops!! Please wait...');
         }
     }

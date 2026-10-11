@@ -1,29 +1,25 @@
 <?php
-$nodeSegment = explode('.',$_SERVER['SERVER_NAME']);
-$node = 'u404684354_'.$nodeSegment[0];
-define('DB_SERVER', 'localhost');
-define('DB_USER',$node);
-define('DB_PASSWORD', 'BR66MK55@msb');
-define('DB_NAME', $node);
+error_reporting(0);
+header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/db_config.php';
 
-if (isset($_GET['term'])) {
-    $return_arr = array();
+$responce = array();
+
+if (isset($_GET['term']) && !empty($_REQUEST['table']) && !empty($_REQUEST['fieldToSearch'])) {
+    $table = preg_replace('/[^a-zA-Z0-9_]/', '', $_REQUEST['table']);
+    $fieldToSearch = preg_replace('/[^a-zA-Z0-9_]/', '', $_REQUEST['fieldToSearch']);
 
     try {
-        $conn = new PDO("mysql:host=" . DB_SERVER . ";port=3306;dbname=" . DB_NAME, DB_USER, DB_PASSWORD);
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $conn = get_app_pdo();
 
-        $stmt = $conn->prepare('SELECT * FROM ' . $_REQUEST['table'] . ' WHERE ' . $_REQUEST['fieldToSearch'] . '  LIKE :term limit 0,20');
-        $stmt->execute(array('term' => '' . $_GET['term'] . ''));
+        $stmt = $conn->prepare("SELECT * FROM `$table` WHERE `$fieldToSearch` LIKE :term LIMIT 0, 20");
+        $stmt->execute(array('term' => '%' . trim($_GET['term']) . '%'));
 
-        while ($row = $stmt->fetch()) {
-            $responce[] = array('id' => $id, 'label' => $row[$_REQUEST['fieldToSearch']], 'value' => $row[$_REQUEST['fieldToSearch']], 'complete' => $row);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $id = isset($row['medicine_id']) ? $row['medicine_id'] : (isset($row['medicine_ID']) ? $row['medicine_ID'] : (isset($row[$table . '_id']) ? $row[$table . '_id'] : ''));
+            $responce[] = array('id' => $id, 'label' => $row[$fieldToSearch], 'value' => $row[$fieldToSearch], 'complete' => $row);
         }
-    } catch (PDOException $e) {
-        echo 'ERROR: ' . $e->getMessage();
-    }
-
-    /* Toss back results as json encoded array. */
-    echo json_encode($responce);
+    } catch (PDOException $e) {}
 }
-?>
+
+echo json_encode($responce);

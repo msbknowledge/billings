@@ -10,7 +10,12 @@
             <?php foreach ($table_meta['data'] as $t_key => $table_td): ?>
                 <tr>    
                     <td style="font-weight: 600; color: #555; vertical-align: middle;">
-                        <?= ucfirst(str_replace('_', ' ', $t_key)) ?>
+                        <?php
+                        $ci =& get_instance();
+                        echo isset($table_meta['config']['replace_text'][$t_key]) 
+                            ? $table_meta['config']['replace_text'][$t_key] 
+                            : (isset($ci->page_config['replace_text'][$t_key]) ? $ci->page_config['replace_text'][$t_key] : ucfirst(str_replace('_', ' ', $t_key)));
+                        ?>
                     </td>                    
                     <?php
                     // Status Columns

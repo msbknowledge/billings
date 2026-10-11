@@ -265,7 +265,15 @@ class Sale extends MY_Controller
      */
     public function view_detail()
     {
-        $invoice = base64_decode($this->uri->segment(4));
+        $inv_seg = $this->uri->segment(4);
+        if (empty($inv_seg)) {
+            $latest = $this->db->query("SELECT sale_invoice FROM sales ORDER BY sale_ID DESC LIMIT 1")->row_array();
+            if (!empty($latest['sale_invoice'])) {
+                redirect(console_url('sale/view_detail/' . base64_encode($latest['sale_invoice'])));
+                return;
+            }
+        }
+        $invoice = base64_decode($inv_seg);
         $type = ($this->uri->segment(5));
         $data = $this->{$this->targetModel}->get_list(array('sale_invoice' => $invoice));
         /* $data = $this->{$this->targetModel}->get_list();*/
@@ -322,7 +330,7 @@ class Sale extends MY_Controller
                // }
             }
         } else {
-            $this->render(array('data' => $data));
+            $this->render(array('data' => $data, 'invoice' => $invoice, 'fullDataArray' => $fullDataArray));
         }
     }
 
@@ -359,6 +367,7 @@ class Sale extends MY_Controller
         if ($this->input->post()) {
             $invoice = base64_decode($this->uri->segment(4));
             $dataFull = $this->{$this->targetModel}->get_list(array('sale_invoice' => $invoice));
+            $this->medical_stock_rollback($invoice);
 
             $customer['customer_name'] = strtoupper($this->input->post('customer_name'));
             $customer['customer_address'] = strtoupper($this->input->post('customer_address'));
@@ -494,11 +503,15 @@ class Sale extends MY_Controller
     {
         $toupdate = null;
         $updatewith = null;
-        foreach ($old as $key => $value) {
-            medicine_stock_update($value['sale_batch'], $value['sale_medicine_id'], $value['sale_strip_quantity'], $value['sale_loose_quantity'], '+');
+        if (!empty($old)) {
+            foreach ($old as $key => $value) {
+                medicine_stock_update($value['sale_batch'], $value['sale_medicine_id'], $value['sale_strip_quantity'], $value['sale_loose_quantity'], '+');
+            }
         }
-        foreach ($new as $key => $value) {
-            medicine_stock_update($value['sale_batch'], $value['sale_medicine_id'], $value['sale_strip_quantity'], $value['sale_loose_quantity'], '-');
+        if (!empty($new)) {
+            foreach ($new as $key => $value) {
+                medicine_stock_update($value['sale_batch'], $value['sale_medicine_id'], $value['sale_strip_quantity'], $value['sale_loose_quantity'], '-');
+            }
         }
     }
 
@@ -695,8 +708,7 @@ class Sale extends MY_Controller
         if ($this->input->post('key')) {
             $this->load->view('console/sale/report_daily_medicine', array('medicine_data' => $medicine_data, 'start' => $period_start, 'end' => $period_end));
         } else {
-
-            $this->load->view('console/sale/report_daily_medicine_tpl', array('medicine_data' => $medicine_data, 'start' => $period_start, 'end' => $period_end,));
+            $this->render(array('medicine_data' => $medicine_data, 'start' => $period_start, 'end' => $period_end, 'page_title' => 'Sale Medicine Report Daywise', 'active_report' => 'daily_sale_medicine'), 'report_daily_medicine_tpl');
         }
     }
 
@@ -809,8 +821,7 @@ class Sale extends MY_Controller
         if ($this->input->post('key')) {
             $this->load->view('console/sale/report_day_wise_tpl', array('hsn_daily_gst_data' => $hsn_daily_gst_data, 'daily_gst_data' => $daily_gst_data, 'customer_data' => $customer_data, 'start' => $period_start, 'end' => $period_end));
         } else {
-
-            $this->load->view('console/sale/gst_record_tpl', array('hsn_daily_gst_data' => $hsn_daily_gst_data, 'daily_gst_data' => $daily_gst_data, 'customer_data' => $customer_data, 'start' => $period_start, 'end' => $period_end,));
+            $this->render(array('hsn_daily_gst_data' => $hsn_daily_gst_data, 'daily_gst_data' => $daily_gst_data, 'customer_data' => $customer_data, 'start' => $period_start, 'end' => $period_end, 'page_title' => 'Sale Report Daywise', 'active_report' => 'report_daily_wise'), 'gst_record_tpl');
         }
     }
     
@@ -1418,8 +1429,7 @@ class Sale extends MY_Controller
         if ($this->input->post('key')) {
             $this->load->view('console/sale/report_gst_wise_tpl', array('hsn_daily_gst_data' => $hsn_daily_gst_data, 'daily_gst_data' => $daily_gst_data, 'customer_data' => $customer_data, 'sale_grand_dis_data' => $sale_grand_dis_data, 'start' => $period_start, 'end' => $period_end));
         } else {
-
-            $this->load->view('console/sale/gst_record_tpl', array('hsn_daily_gst_data' => $hsn_daily_gst_data, 'daily_gst_data' => $daily_gst_data, 'customer_data' => $customer_data, 'sale_grand_dis_data' => $sale_grand_dis_data, 'start' => $period_start, 'end' => $period_end,));
+            $this->render(array('hsn_daily_gst_data' => $hsn_daily_gst_data, 'daily_gst_data' => $daily_gst_data, 'customer_data' => $customer_data, 'sale_grand_dis_data' => $sale_grand_dis_data, 'start' => $period_start, 'end' => $period_end, 'page_title' => 'Sale Report GSTIN Wise', 'active_report' => 'report_gstin_wise'), 'gst_record_tpl');
         }
     }
     
@@ -1619,8 +1629,7 @@ expiry_returns.expiry_return_date,expiry_returns.expiry_return_ref,
         if ($this->input->post('key')) {
             $this->load->view('console/sale/report_daily_customer', array('alldata' => $alldata, 'start' => $period_start, 'end' => $period_end, 'customer' => $customer_names));
         } else {
-
-            $this->load->view('console/sale/report_daily_customer_tpl', array('alldata' => $alldata, 'start' => $period_start, 'end' => $period_end, 'customer' => $customer_names));
+            $this->render(array('alldata' => $alldata, 'start' => $period_start, 'end' => $period_end, 'customer' => $customer_names, 'page_title' => 'Customer Payment Report', 'active_report' => 'customer_payment_report'), 'report_daily_customer_tpl');
         }
     }
     

@@ -241,39 +241,105 @@ function medicine_overview() {
     <?php
 }
 
-function medicine_stock_update($medicine_batch, $medicine_id, $medicine_strip_stock,$medicine_loose_stock=0, $type = "+", $medicine_mrp = null, $medicine_expire_month = null, $medicine_expire_year = null) {
-    /*$CI = &get_instance();
-    $CI->db->set('medicine_strip_stock', "medicine_strip_stock $type $medicine_strip_stock", FALSE);
-    $CI->db->set('medicine_loose_stock', "medicine_loose_stock $type $medicine_loose_stock", FALSE);
-    if ($medicine_mrp != null) {
-        $CI->db->set('medicine_mrp', $medicine_mrp);
+function medicine_stock_update($medicine_batch, $medicine_id, $medicine_strip_stock, $medicine_loose_stock = 0, $type = "+", $medicine_mrp = null, $medicine_expire_month = null, $medicine_expire_year = null) {
+    if (empty($medicine_id)) {
+        return false;
     }
-    if ($medicine_expire_month != null) {
-        $CI->db->set('medicine_expire_month', $medicine_expire_month);
-    }
-    if ($medicine_expire_year != null) {
-        $CI->db->set('medicine_expire_year', $medicine_expire_year);
-    }
-    $CI->db->where(array('medicine_stock_medicine' => $medicine_id, 'medicine_stock_batch' => $medicine_batch));
-    $CI->db->update('medicine_stocks');
-    if ($CI->db->affected_rows() == 0) {
-        $CI->db->set('medicine_strip_stock', "medicine_strip_stock $type $medicine_strip_stock", FALSE);
-        $CI->db->set('medicine_loose_stock', "medicine_loose_stock $type $medicine_loose_stock", FALSE);
-        $CI->db->set('medicine_stock_medicine', $medicine_id);
-        $CI->db->set('medicine_stock_batch', $medicine_batch);
-        if ($medicine_mrp != null) {
-            $CI->db->set('medicine_mrp', $medicine_mrp);
+    $medicine_batch = !empty($medicine_batch) ? trim($medicine_batch) : 'N/A';
+    $strip_qty = intval($medicine_strip_stock);
+    $loose_qty = intval($medicine_loose_stock);
+
+    $CI = &get_instance();
+
+    // Fetch unit for loose calculation
+    $med = $CI->db->select('medicine_unit')->get_where('medicines', array('medicine_id' => $medicine_id))->row_array();
+    $unit = (!empty($med['medicine_unit']) && intval($med['medicine_unit']) > 1) ? intval($med['medicine_unit']) : 1;
+
+    // Check if batch already exists in medicine_stocks
+    $existing = $CI->db->get_where('medicine_stocks', array(
+        'medicine_stock_medicine' => $medicine_id,
+        'medicine_stock_batch' => $medicine_batch
+    ))->row_array();
+
+    if (!empty($existing)) {
+        $current_strip = intval($existing['medicine_strip_stock']);
+        $current_loose = intval($existing['medicine_loose_stock']);
+
+        if ($type === '-') {
+            $new_strip = $current_strip - $strip_qty;
+            $new_loose = $current_loose - $loose_qty;
+        } else {
+            $new_strip = $current_strip + $strip_qty;
+            $new_loose = $current_loose + $loose_qty;
         }
-        if ($medicine_expire_month != null) {
-            $CI->db->set('medicine_expire_month', $medicine_expire_month);
+
+        // Handle loose overflow / underflow with unit
+        if ($unit > 1) {
+            if ($new_loose < 0) {
+                $borrow_strips = ceil(abs($new_loose) / $unit);
+                $new_strip -= $borrow_strips;
+                $new_loose += ($borrow_strips * $unit);
+            } elseif ($new_loose >= $unit) {
+                $add_strips = floor($new_loose / $unit);
+                $new_strip += $add_strips;
+                $new_loose -= ($add_strips * $unit);
+            }
         }
-        if ($medicine_expire_year != null) {
-            $CI->db->set('medicine_expire_year', $medicine_expire_year);
+
+        $update_data = array(
+            'medicine_strip_stock' => $new_strip,
+            'medicine_loose_stock' => $new_loose,
+            'medicine_stock_date'  => date('Y-m-d H:i:s')
+        );
+
+        if ($medicine_mrp !== null && $medicine_mrp !== '') {
+            $update_data['medicine_mrp'] = $medicine_mrp;
         }
-        $CI->db->insert('medicine_stocks');
+        if ($medicine_expire_month !== null && $medicine_expire_month !== '') {
+            $update_data['medicine_expire_month'] = $medicine_expire_month;
+        }
+        if ($medicine_expire_year !== null && $medicine_expire_year !== '') {
+            $update_data['medicine_expire_year'] = $medicine_expire_year;
+        }
+
+        $CI->db->where('medicine_stock_ID', $existing['medicine_stock_ID']);
+        return $CI->db->update('medicine_stocks', $update_data);
+    } else {
+        // Record does not exist: insert new
+        if ($type === '-') {
+            $new_strip = 0 - $strip_qty;
+            $new_loose = 0 - $loose_qty;
+        } else {
+            $new_strip = $strip_qty;
+            $new_loose = $loose_qty;
+        }
+
+        if ($unit > 1) {
+            if ($new_loose < 0) {
+                $borrow_strips = ceil(abs($new_loose) / $unit);
+                $new_strip -= $borrow_strips;
+                $new_loose += ($borrow_strips * $unit);
+            } elseif ($new_loose >= $unit) {
+                $add_strips = floor($new_loose / $unit);
+                $new_strip += $add_strips;
+                $new_loose -= ($add_strips * $unit);
+            }
+        }
+
+        $insert_data = array(
+            'medicine_stock_medicine' => $medicine_id,
+            'medicine_stock_batch'    => $medicine_batch,
+            'medicine_strip_stock'    => $new_strip,
+            'medicine_loose_stock'    => $new_loose,
+            'medicine_stock_loose'    => 0,
+            'medicine_expire_month'   => !empty($medicine_expire_month) ? $medicine_expire_month : 0,
+            'medicine_expire_year'    => !empty($medicine_expire_year) ? $medicine_expire_year : 0,
+            'medicine_mrp'            => !empty($medicine_mrp) ? $medicine_mrp : 0,
+            'medicine_stock_date'     => date('Y-m-d H:i:s')
+        );
+
+        return $CI->db->insert('medicine_stocks', $insert_data);
     }
-    #$CI->db->query('delete from medicine_stocks where medicine_loose_stock <= 0 && medicine_strip_stock <= 0');
-    */
 }
 function medicine_js(){
 ?>

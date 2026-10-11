@@ -83,6 +83,20 @@ class Return_sale extends MY_Controller
             }
             //pr($return_sale, 1);
             $data = $this->return_sale_model->insert_data($return_sale, true);
+            if (!empty($return_sale)) {
+                foreach ($return_sale as $rsItem) {
+                    medicine_stock_update(
+                        $rsItem['return_sale_Batch'],
+                        $rsItem['return_sale_medicine_id'],
+                        $rsItem['return_sale_strip'],
+                        0,
+                        '+',
+                        $rsItem['return_sale_mrp'],
+                        $rsItem['return_sale_expire_month'],
+                        $rsItem['return_sale_expire_year']
+                    );
+                }
+            }
             increase_expiry_number();
             $customer_data = $this->customers_model->get_list();
             $this->render(array('customer' => $customer_data, 'status' => 'success', 'message' => '<strong>Well done!</strong> Data Save.'), 'add_detail');
@@ -270,10 +284,9 @@ class Return_sale extends MY_Controller
         }
         $customer = $this->customers_model->get_list();
         if ($this->input->post()) {
-
             $this->load->view('console/return_sale/sale_ajax_report_tpl', array('return_sale_data' => $return_sale_data, 'start' => $start, 'end' => $end));
         } else {
-            $this->load->view('console/return_sale/sale_report_tpl', array('return_sale_data' => $return_sale_data, 'start' => $start, 'end' => $end, 'customer' => $customer));
+            $this->render(array('return_sale_data' => $return_sale_data, 'start' => $start, 'end' => $end, 'customer' => $customer, 'page_title' => 'Return Sale Report', 'active_report' => 'return_sale'), 'sale_report_tpl');
         }
     }
     public function fetch_invoice_details()

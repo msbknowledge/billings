@@ -1,52 +1,53 @@
 <?php
-$nodeSegment = explode('.',$_SERVER['SERVER_NAME']);
-$node = 'u404684354_'.$nodeSegment[0];
-define('DB_SERVER', 'localhost');
-define('DB_USER',$node);
-define('DB_PASSWORD', 'BR66MK55@msb');
-define('DB_NAME', $node);
+error_reporting(0);
+header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/db_config.php';
+
+$responce = array();
+
 if (isset($_GET['product_id'])) {
-    $return_arr = array();
+    $prod_id = intval($_GET['product_id']);
 
     try {
-        $conn = new PDO("mysql:host=" . DB_SERVER . ";port=3306;dbname=" . DB_NAME, DB_USER, DB_PASSWORD);
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $conn = get_app_pdo();
 
-		if(isset($_GET['term'])){
-        $stmt = $conn->prepare('SELECT product_stocks.*,purchases.purchase_cgst_percent,purchases.purchase_unit FROM product_stocks left join purchases on purchase_product_id = product_stock_product  WHERE product_stock_product = '. $_GET['product_id'] .' and product_stock_batch  LIKE :term group by  product_stock_batch limit 0,20');
-        $stmt->execute(array('term' => '%' . $_GET['term'] . '%'));
-		} else {
-		
-			$stmt = $conn->prepare('SELECT product_stocks.*,purchases.purchase_cgst_percent,purchases.purchase_unit FROM product_stocks left join purchases on purchase_product_id = product_stock_product  WHERE product_stock_product = '. $_GET['product_id'] .'  group by  product_stock_batch limit 0,20');
-			$stmt->execute(array());
-
-		}
-        while ($row = $stmt->fetch()) {
-			$stmtx = $conn->prepare('SELECT products.* from products WHERE product_id = '. $_GET['product_id'] .'');
-			$stmtx->execute(array());
-			$rowx = $stmtx->fetch();
-			$search['sale_expire_year'] = $row['product_expire_year'];
-			$search['sale_expire_month'] = $row['product_expire_month'];
-			$search['sale_cgst_percent'] = $row['purchase_cgst_percent']? $row['purchase_cgst_percent']:((float)$rowx['product_gst']/2);
-			$search['product_stock_batch'] = $row['product_stock_batch'];
-			$search['product_strip_stock'] = $row['product_strip_stock'];
-			$search['product_loose_stock'] = $row['product_loose_stock'];
-			//$search['sale_cgst_percent'] = $row['sale_cgst_percent']?$row['sale_cgst_percent']:6;
-			$search['product_mrp'] = $row['product_mrp'];
-			//if($row['medicine_unit']==0)
-			//$row['medicine_unit'] = $row['purchase_unit'];
-			$search['sale_mrp'] = $row['product_mrp'];
-			if($search['product_strip_stock']==0 && $search['product_stock_loose'])
-				continue;
-            $responce[] = array('id' => '', 'label' => $search['product_stock_batch'].' [S:'.$search['product_strip_stock'].'|L:'.$search['product_loose_stock'].']('.$search['sale_expire_month'].'/'.$search['sale_expire_year'].') |'.$search['product_mrp'], 'value' => $search['product_stock_batch'], 'complete' => $search);
-			
+        if (isset($_GET['term']) && strlen(trim($_GET['term'])) > 0) {
+            $stmt = $conn->prepare('SELECT product_stocks.*, purchases.purchase_cgst_percent, purchases.purchase_unit FROM product_stocks LEFT JOIN purchases ON purchase_product_id = product_stock_product WHERE product_stock_product = :prod_id AND product_stock_batch LIKE :term GROUP BY product_stock_batch LIMIT 0, 20');
+            $stmt->execute(array('prod_id' => $prod_id, 'term' => '%' . trim($_GET['term']) . '%'));
+        } else {
+            $stmt = $conn->prepare('SELECT product_stocks.*, purchases.purchase_cgst_percent, purchases.purchase_unit FROM product_stocks LEFT JOIN purchases ON purchase_product_id = product_stock_product WHERE product_stock_product = :prod_id GROUP BY product_stock_batch LIMIT 0, 20');
+            $stmt->execute(array('prod_id' => $prod_id));
         }
-    } catch (PDOException $e) {
-        echo 'ERROR: ' . $e->getMessage();
-    }
 
-		
-    /* Toss back results as json encoded array. */
-    echo json_encode($responce);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $stmtx = $conn->prepare('SELECT products.* FROM products WHERE product_id = :prod_id');
+            $stmtx->execute(array('prod_id' => $prod_id));
+            $rowx = $stmtx->fetch(PDO::FETCH_ASSOC);
+
+            $search = array();
+            $search['sale_expire_year'] = isset($row['product_expire_year']) ? $row['product_expire_year'] : '';
+            $search['sale_expire_month'] = isset($row['product_expire_month']) ? $row['product_expire_month'] : '';
+            $gstHalf = (!empty($rowx['product_gst'])) ? ((float)$rowx['product_gst'] / 2) : 0;
+            $search['sale_cgst_percent'] = !empty($row['purchase_cgst_percent']) ? $row['purchase_cgst_percent'] : $gstHalf;
+            $search['sale_sgst_percent'] = $search['sale_cgst_percent'];
+            $search['product_stock_batch'] = isset($row['product_stock_batch']) ? $row['product_stock_batch'] : '';
+            $search['product_strip_stock'] = isset($row['product_strip_stock']) ? $row['product_strip_stock'] : 0;
+            $search['product_loose_stock'] = isset($row['product_loose_stock']) ? $row['product_loose_stock'] : 0;
+            $search['product_mrp'] = isset($row['product_mrp']) ? $row['product_mrp'] : '0.00';
+            $search['sale_mrp'] = $search['product_mrp'];
+
+            if ($search['product_strip_stock'] == 0 && !empty($search['product_stock_loose'])) {
+                continue;
+            }
+
+            $responce[] = array(
+                'id' => '',
+                'label' => $search['product_stock_batch'] . ' [S:' . $search['product_strip_stock'] . '|L:' . $search['product_loose_stock'] . '](' . $search['sale_expire_month'] . '/' . $search['sale_expire_year'] . ') |' . $search['product_mrp'],
+                'value' => $search['product_stock_batch'],
+                'complete' => $search
+            );
+        }
+    } catch (PDOException $e) {}
 }
-?>
+
+echo json_encode($responce);

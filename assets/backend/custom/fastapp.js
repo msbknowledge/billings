@@ -398,7 +398,13 @@ var loadEditForm = function (targetItem) {
             modal.find('.modal-body p, .modal-body').html(respData);
             initDatePickers(modal);
             if ($.fn.select2) {
-                modal.find('.select2, [data-rel="chosen"]').select2({ width: '100%' });
+                modal.find('.select2, [data-rel="chosen"]').each(function() {
+                    var opts = { width: '100%' };
+                    if ($(this).attr('multiple')) {
+                        opts.tags = true;
+                    }
+                    $(this).select2(opts);
+                });
             }
             modal.find('input:visible:first').focus();
         }
@@ -435,7 +441,13 @@ var loadAddForm = function () {
             modal.find('.modal-body p, .modal-body').html(respData);
             initDatePickers(modal);
             if ($.fn.select2) {
-                modal.find('.select2, [data-rel="chosen"]').select2({ width: '100%' });
+                modal.find('.select2, [data-rel="chosen"]').each(function() {
+                    var opts = { width: '100%' };
+                    if ($(this).attr('multiple')) {
+                        opts.tags = true;
+                    }
+                    $(this).select2(opts);
+                });
             }
             modal.find('input:visible:first').focus();
         }

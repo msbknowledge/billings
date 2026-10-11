@@ -1,15 +1,5 @@
 <?php
-$nodeSegment = explode('.',$_SERVER['SERVER_NAME']);
-$node = 'u404684354_'.$nodeSegment[0];
-define('DB_SERVER', 'localhost');
-define('DB_USER',$node);
-define('DB_PASSWORD', 'BR66MK55@msb');
-define('DB_NAME', $node);
-// $node = 'simplebillings_'.$nodeSegment[0];
-// define('DB_SERVER', 'localhost');
-// define('DB_USER', 'simplebillings');
-// define('DB_PASSWORD', '#logic#123');
-// define('DB_NAME', $node);
+require_once __DIR__ . '/db_config.php';
 if (isset($_GET['term'])) {
     $return_arr = array();
 

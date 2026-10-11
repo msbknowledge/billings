@@ -34,8 +34,22 @@ class Medicine extends MY_Controller {
         $this->page_config['autocomplete']['medicine_pack'] = array('medicines' => 'medicine_pack');
         $this->page_config['autocomplete']['medicine_storage'] = array('medicines' => 'medicine_storage');
         $this->page_config['autocomplete']['medicine_category'] = array('medicine_categories' => 'medicine_category_name');
-        $this->page_config['searchFields'] = 'medicine_name,medicine_id,medicine_discount,medicine_manufacturer,medicine_category,medicine_hsn,medicine_storage'; //search box,
-        $this->page_config['list_columns'] = 'medicine_name,medicine_id,medicine_discount,medicine_manufacturer,medicine_category,medicine_hsn,medicine_storage';
+        $this->page_config['autocomplete']['medicine_batch'] = array('medicine_stocks' => 'medicine_stock_batch');
+        $this->page_config['searchFields'] = 'medicine_name,medicine_batch,medicine_manufacturer,medicine_category,medicine_hsn,medicine_storage,medicine_id'; //search box,
+        $this->page_config['list_columns'] = 'medicine_name,medicine_batch,medicine_manufacturer,medicine_category,medicine_hsn,medicine_storage,medicine_discount,medicine_id';
+        $this->page_config['replace_text'] = array(
+            'medicine_batch'        => 'Batch No',
+            'medicine_name'         => 'Medicine Name',
+            'medicine_manufacturer' => 'Manufacturer',
+            'medicine_category'     => 'Category',
+            'medicine_hsn'          => 'HSN',
+            'medicine_storage'      => 'Storage',
+            'medicine_discount'     => 'Discount',
+            'medicine_unit'         => 'Unit',
+            'medicine_gst'          => 'GST (%)',
+            'medicine_schedule'     => 'Schedule',
+            'medicine_id'           => 'ID'
+        );
         $this->allowed_action = array('add_detail', 'edit_detail', 'index', 'view_detail');
 
         $this->output->set_header('Last-Modified:' . gmdate('D, d M Y H:i:s') . 'GMT');
@@ -44,6 +58,98 @@ class Medicine extends MY_Controller {
         $this->output->set_header('Pragma: no-cache');
         /*         * end page_config* */
         //register_hook('hook_test', 'header');
+    }
+
+    public function add_detail() {
+        $postedData = $this->input->post();
+        if (isset($postedData['load_add_entry'])) {
+            parent::add_detail();
+        } else if ($postedData) {
+            if (!empty($postedData['medicine_name'])) {
+                $postedData['medicine_name'] = trim(strtoupper($postedData['medicine_name']));
+            }
+            if (!empty($postedData['medicine_batch'])) {
+                $postedData['medicine_batch'] = trim(strtoupper($postedData['medicine_batch']));
+            }
+            if (!empty($postedData['medicine_manufacturer'])) {
+                $postedData['medicine_manufacturer'] = trim(strtoupper($postedData['medicine_manufacturer']));
+            }
+            if (!empty($postedData['medicine_category'])) {
+                $postedData['medicine_category'] = trim(strtoupper($postedData['medicine_category']));
+            }
+            if (!empty($postedData['medicine_storage'])) {
+                $postedData['medicine_storage'] = trim(strtoupper($postedData['medicine_storage']));
+            }
+
+            $lastInsertedID = $this->{$this->targetModel}->insert_data($postedData);
+
+            if (!empty($lastInsertedID) && !empty($postedData['medicine_batch'])) {
+                $batch = $postedData['medicine_batch'];
+                $exists = $this->db->get_where('medicine_stocks', array(
+                    'medicine_stock_medicine' => $lastInsertedID,
+                    'medicine_stock_batch'    => $batch
+                ))->row_array();
+                if (!$exists) {
+                    $this->db->insert('medicine_stocks', array(
+                        'medicine_stock_medicine' => $lastInsertedID,
+                        'medicine_stock_batch'    => $batch,
+                        'medicine_strip_stock'    => 0,
+                        'medicine_loose_stock'    => 0,
+                        'medicine_stock_date'     => date('Y-m-d H:i:s'),
+                        'medicine_mrp'            => 0.00
+                    ));
+                }
+            }
+
+            echo json_encode(array('status' => 'success', 'message' => 'Medicine Added Successfully'));
+        }
+    }
+
+    public function edit_detail() {
+        $postedData = $this->input->post();
+        if (isset($postedData['load_edit_entry'])) {
+            parent::edit_detail();
+        } else if ($postedData) {
+            if (!empty($postedData['medicine_name'])) {
+                $postedData['medicine_name'] = trim(strtoupper($postedData['medicine_name']));
+            }
+            if (!empty($postedData['medicine_batch'])) {
+                $postedData['medicine_batch'] = trim(strtoupper($postedData['medicine_batch']));
+            }
+            if (!empty($postedData['medicine_manufacturer'])) {
+                $postedData['medicine_manufacturer'] = trim(strtoupper($postedData['medicine_manufacturer']));
+            }
+            if (!empty($postedData['medicine_category'])) {
+                $postedData['medicine_category'] = trim(strtoupper($postedData['medicine_category']));
+            }
+            if (!empty($postedData['medicine_storage'])) {
+                $postedData['medicine_storage'] = trim(strtoupper($postedData['medicine_storage']));
+            }
+
+            $primaryKey = $this->{$this->targetModel}->get_primary_key();
+            $this->{$this->targetModel}->update_data($postedData, array($primaryKey => $postedData[$primaryKey]));
+
+            $medId = isset($postedData[$primaryKey]) ? $postedData[$primaryKey] : null;
+            if (!empty($medId) && !empty($postedData['medicine_batch'])) {
+                $batch = $postedData['medicine_batch'];
+                $exists = $this->db->get_where('medicine_stocks', array(
+                    'medicine_stock_medicine' => $medId,
+                    'medicine_stock_batch'    => $batch
+                ))->row_array();
+                if (!$exists) {
+                    $this->db->insert('medicine_stocks', array(
+                        'medicine_stock_medicine' => $medId,
+                        'medicine_stock_batch'    => $batch,
+                        'medicine_strip_stock'    => 0,
+                        'medicine_loose_stock'    => 0,
+                        'medicine_stock_date'     => date('Y-m-d H:i:s'),
+                        'medicine_mrp'            => 0.00
+                    ));
+                }
+            }
+
+            echo json_encode(array('status' => 'success', 'message' => 'Medicine Updated Successfully'));
+        }
     }
 
     /*     * *************** */

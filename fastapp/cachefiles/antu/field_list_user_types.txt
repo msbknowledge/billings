@@ -1,0 +1,1 @@
+[{"user_type_ID":{"Field":"user_type_ID","Type":"int(11)","Null":"NO","Key":"PRI","Default":null,"Extra":"auto_increment"},"user_type_name":{"Field":"user_type_name","Type":"varchar(50)","Null":"NO","Key":"","Default":null,"Extra":""},"user_type_super":{"Field":"user_type_super","Type":"tinyint(1)","Null":"NO","Key":"","Default":"0","Extra":""}}]

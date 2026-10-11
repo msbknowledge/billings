@@ -1,256 +1,300 @@
 <style>
-    table{
+    .return-form-wrapper {
+        font-family: inherit;
+    }
+    .return-form-wrapper .box {
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        background: #fff;
+    }
+    .return-form-wrapper .box-header {
+        border-bottom: 1px solid #f4f4f4;
+        padding: 12px 15px;
+    }
+    .return-form-wrapper .box-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0;
+        display: inline-block;
+        color: #334155;
+    }
+    .return-form-wrapper .table-custom-items {
+        margin-bottom: 0;
         width: 100%;
+    }
+    .return-form-wrapper .table-custom-items th {
+        background: #2c3b4c;
+        color: #ffffff;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        vertical-align: middle !important;
         text-align: center;
-
+        padding: 9px 6px;
+        white-space: nowrap;
+        border: 1px solid #1e293b !important;
     }
-
-    th{
-        border: 1px solid black;
-        border-bottom: 1px solid black;
+    .return-form-wrapper .table-custom-items td {
+        vertical-align: middle !important;
+        padding: 6px !important;
+        text-align: center;
+        border: 1px solid #cbd5e1 !important;
+        background: #ffffff;
     }
-
-    td{
-        border: 1px solid black;
+    .return-form-wrapper .table-custom-items input,
+    .return-form-wrapper .table-custom-items select {
+        font-size: 12px;
+        height: 30px;
+        border: 1px solid #cbd5e1;
+        border-radius: 3px;
+        text-align: center;
+        padding: 3px 6px;
+        box-sizing: border-box;
+        width: 100%;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
-
-    .ui-autocomplete-loading {
-        background: white url('data:image/gif;base64,R0lGODlhEAAQAPMPALu7u5mZmTMzM93d3REREQAAAHd3d1VVVWZmZqqqqoiIiO7u7kRERCIiIgARAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQFBwAPACwAAAAAEAAQAEAEcPDJtyg6dUrFetDTIopMoSyFcxxD1krD8AwCkASDIlPaUDQLR6G1Cy0SgqIkE1IQGMrFAKCcGWSBzwPAnAwarcKQ15MpTMJYd1ZyUDXSDGelBY0qIoBh/ZoYGgELCjoxCRRvIQcGD1kzgSAgAACQDxEAIfkEBQcADwAsAAAAAA8AEAAABF3wyfkMkotOJpscRKJJwtI4Q1MAoxQ0RFBw0xEvhGAVRZZJh4JgMAEQW7TWI4EwGFjKR+CAQECjn8DoN0kwDtvBT8FILAKJgfoo1iAGAPNVY9DGJXNMIHN/HJVqIxEAIfkEBQcADwAsAAAAABAADwAABFrwyfmColgiydpaQiY5x9Ith7hURdIl0wBIhpCAjKIIxaAUPQ0hFQsAC7MJALFSFi4SgC4wyHyuCYNWxH3AuhSEotkNGAALAPqqkigG8MWAjAnM4A8594vPUyIAIfkEBQcADwAsAAAAABAAEAAABF3wySkDvdKsddg+APYIWrcg2DIRQAcU6DJICjIsjBEETLEEBYLqYSDdJoCGiHgZwG4LQCCRECEIBAdoF5hdEIWwgBJqDs7DgcKyRHZl3uUwuhm2AbNNW+LV7yd+FxEAIfkEBQcACAAsAAAAABAADgAABEYQyYmMoVgeWQrP3NYhBCgZBdAFRUkdBIAUguVVo1ZsWFcEGB5GMBkEjiCBL2a5ZAi+m2SAURExwKqPiuCafBkvBSCcmiYRACH5BAUHAA4ALAAAAAAQABAAAARs0MnpAKDYrbSWMp0xZIvBKYrXjNmADOhAKBiQDF5gGcICNAyJTwFYTBaDQ0HAkgwSmAUj0OkMrkZM4HBgKK7YTKDRICAo2clAEIheKc9CISjEVTuEQrJASGcSBQcSUFEUDQUXJBgDBW0Zj34RACH5BAUHAA8ALAAAAAAQABAAAARf8Mn5xqBYgrVC4EEmBcOSfAEjSopJMglmcQlgBYjE5NJgZwjCAbO4YBAJjpIjSiAQh5ayyRAIDKvJIbnIagoFRFdkQDQKC0RBsCIUFAWsT7RwG410R8HiiK0WBwJjFBEAIfkEBQcADgAsAQABAA8ADwAABFrQybEWADXJLUHHAMJxIDAgnrOo2+AOibEMh1LN62gIxphzitRoCDAYNcNN6FBLShao4WzwHDQKvVGhoFAwGgtFgQHENhoB7nCwHRAIC0EyUcC8Zw1ha3NIRgAAIfkEBQcADwAsAAAAABAAEAAABGDwyfnWoljaNYYFV+Zx3hCEGEcuypBtMJBISpClAWLfWODymIFiCJwMDMiZBNAAYFqUAaNQ2E0YBIXGURAMCo1AAsFYBBoIScBJEwgSVcmP0li4FwcHz+FpCCQMPCFINxEAIfkEBQcADgAsAAABABAADwAABFzQyemWXYNqaSXY2vVtw3UNmROM4JQowKKlFOsgRI6ASQ8IhSADFAjAMIMAgSYJtByxyQIhcEoaBcSiwegpDgvAwSBJ0AIHBoCQqIAEi/TCIAABGhLG8MbcKBQgEQAh+QQFBwAPACwAAAEAEAAPAAAEXfDJSd+qeK5RB8fDRRWFspyotAAfQBbfNLCVUSSdKDV89gDAwcFBIBgywMRnkWBgcJUDKSZRIKAPQcGwYByAAYTEEJAAJIGbATEQ+B4ExmK9CDhBd8ThdHw/AmUYEQAh+QQFBwAPACwAAAEADwAPAAAEXvBJQIa8+ILSspdHkXxS9wxF4Q3L2aTBeC0sFjhAtuyLIjAMhYc2GBgaSKGuyNoBDp7czFAgeBIKwC6kWCAMxUSAFjtNCAAFGGF5tCQLAaJnWCTqHoREvQuQJAkyGBEAOw==')
-            right center no-repeat;
+    .return-form-wrapper .table-custom-items input:focus,
+    .return-form-wrapper .table-custom-items select:focus {
+        border-color: #3c8dbc;
+        outline: none;
+        box-shadow: 0 0 4px rgba(60, 141, 188, 0.4);
+    }
+    .return-summary-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 15px 20px;
+    }
+    .return-summary-card .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px dashed #cbd5e1;
+        font-size: 14px;
+    }
+    .return-summary-card .summary-row:last-child {
+        border-bottom: none;
+        padding-top: 10px;
+    }
+    .return-summary-card .summary-label {
+        color: #64748b;
+        font-weight: 500;
+    }
+    .return-summary-card .summary-val {
+        font-weight: 700;
+        color: #1e293b;
+    }
+    .return-summary-card .summary-val.highlight-green {
+        font-size: 20px;
+        color: #059669;
+    }
+    .btn-remove-row {
+        color: #ef4444;
+        background: #fee2e2;
+        border: 1px solid #fca5a5;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .btn-remove-row:hover {
+        background: #ef4444;
+        color: #fff;
     }
 </style>
-<?php if (isset($status)): ?>
-    <div class="alert alert-<?= $status ?>" >
-        <button type="button" class="close" data-dismiss="alert">×</button>
-        <?= $message ?>
-    </div>
-<?php endif; ?>
 
-<form method="post" action="" >
-    <table style=" border: none;">
-        <tr>
+<div class="return-form-wrapper">
+    <?php if (isset($status)): ?>
+        <div class="alert alert-<?= $status ?> alert-dismissible" style="margin-bottom: 15px;">
+            <button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+            <i class="fa fa-info-circle"></i> <?= $message ?>
+        </div>
+    <?php endif; ?>
 
-            <th  style=" border: none;">
-                <p style="text-align: left;">
-                    Supplier:
-                    <select name="suplier_id">
+    <form method="post" action="" id="editReturnPurchaseForm">
+        <!-- Section 1: Purchase Return Header Details -->
+        <div class="box box-primary">
+            <div class="box-header with-border">
+                <h3 class="box-title"><i class="fa fa-pencil-square-o text-primary"></i> Edit Purchase Return Information</h3>
+                <div class="box-tools pull-right">
+                    <span class="label label-primary" style="font-size: 13px; padding: 5px 10px;">
+                        <i class="fa fa-hashtag"></i> <?= $data[0]['return_purchase_entry_number'] ?>
+                    </span>
+                </div>
+            </div>
+            <div class="box-body" style="padding: 20px;">
+                <div class="row">
+                    <div class="col-md-3 col-sm-6">
+                        <div class="form-group">
+                            <label><i class="fa fa-truck text-muted"></i> Supplier <span class="text-danger">*</span></label>
+                            <select name="suplier_id" class="form-control input-sm select2" style="width: 100%;">
+                                <?php if (!empty($supplier)) : ?>
+                                    <?php foreach ($supplier as $val) : ?>
+                                        <option value="<?= $val['supplier_id'] ?>" <?= ($data[0]['return_purchase_supplier'] == $val['supplier_id']) ? 'selected="selected"' : '' ?>><?= $val['supplier_name'] ?></option> 
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="form-group">
+                            <label><i class="fa fa-list-alt text-muted"></i> Return Type <span class="text-danger">*</span></label>
+                            <select name="return_purchase_type" required="required" class="form-control input-sm select2" style="width: 100%;">
+                                <option value="">-- Choose Type --</option>
+                                <?php if (!empty($return_purchase_type)) : ?>
+                                    <?php foreach ($return_purchase_type as $key => $val) : ?>
+                                        <option value="<?= $key ?>" <?= ($data[0]['return_purchase_type'] == $key) ? 'selected="selected"' : '' ?>><?= $val ?></option> 
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-sm-6">
+                        <div class="form-group">
+                            <label><i class="fa fa-calendar text-muted"></i> Return Date <span class="text-danger">*</span></label>
+                            <input type="text" value="<?= date('d-M-Y', strtotime($data[0]['return_purchase_date'])) ?>" required="required" class="form-control input-sm datepicker" autocomplete="off" name="expiry_date" />
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-sm-6">
+                        <div class="form-group">
+                            <label><i class="fa fa-tag text-muted"></i> Reference <span class="text-danger">*</span></label>
+                            <input value="<?= $data[0]['return_purchase_ref'] ?>" required="required" type="text" class="form-control input-sm" autocomplete="off" name="return_purchase_ref" />
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-sm-6">
+                        <div class="form-group">
+                            <label><i class="fa fa-barcode text-muted"></i> Entry Number</label>
+                            <input required="required" readonly="readonly" value="<?= $data[0]['return_purchase_entry_number'] ?>" type="text" name="return_purchase_entry_number" class="form-control input-sm" style="background:#f8fafc; font-weight:700; color:#1e293b;" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                        <?php foreach ($supplier as $val) { ?>
-                            <option value="<?= $val['supplier_id'] ?>" <?php if ($data[0]['return_purchase_supplier'] == $val['supplier_id']) {
-                            echo 'selected';
-                        } ?>><?= $val['supplier_name'] ?></option> 
-                        <?php }
-                        ?>
-                    </select>
+        <!-- Section 2: Items Table -->
+        <div class="box box-info">
+            <div class="box-header with-border">
+                <h3 class="box-title"><i class="fa fa-cubes text-info"></i> Purchase Return Items</h3>
+            </div>
+            <div class="box-body" style="padding: 15px;">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-custom-items">
+                        <thead>
+                            <tr>
+                                <th style="width: 45px;">#</th>
+                                <th style="min-width: 220px;">Product Name <span class="text-danger">*</span></th>
+                                <th style="width: 90px;">HSN</th>
+                                <th style="width: 100px;">Batch <span class="text-danger">*</span></th>
+                                <th style="width: 90px;">Strip / Qty <span class="text-danger">*</span></th>
+                                <th style="width: 120px;">Exp Date (MM/YY)</th>
+                                <th style="width: 100px;">MRP (₹)</th>
+                                <th style="width: 110px;">Total (₹)</th>
+                                <th style="width: 55px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="appendHere">
+                            <?php 
+                            $totalAmount = 0;
+                            foreach ($data as $k => $value) : 
+                                $totalAmount += floatval($value['return_purchase_total']);
+                            ?>
+                                <tr class="rowline">
+                                    <td class="text-center font-bold"><span><?= $k + 1 ?></span></td>
+                                    <td><input required="required" type="text" class="form-control input-sm" value="<?= html_escape($value['return_purchase_medicine']) ?>" name="medicine_name[]"></td>
+                                    <td><input required="required" type="text" class="form-control input-sm" value="<?= html_escape($value['return_purchase_HSN']) ?>" name="medicine_hsn[]"></td>
+                                    <td><input required="required" type="text" class="form-control input-sm" value="<?= html_escape($value['return_purchase_Batch']) ?>" name="return_purchase_Batch[]" pattern="^\S+$"></td>
+                                    <td><input required="required" type="number" class="form-control input-sm" value="<?= $value['return_purchase_strip'] ?>" oninput="calcualteTotal(this)" name="return_purchase_strip[]" min="1" max="<?= isset($value['max_strip_limit']) ? $value['max_strip_limit'] : '' ?>"></td>
+                                    <td>
+                                        <div style="display:flex; align-items:center; justify-content:center; gap:4px;">
+                                            <input required="required" type="text" class="form-control input-sm" value="<?= $value['return_purchase_expire_month'] ?>" readonly="readonly" name="return_purchase_expire_month[]" pattern="^[0-9]+$" style="width:46px; text-align:center;">
+                                            <span>/</span>
+                                            <input required="required" value="<?= $value['return_purchase_expire_year'] ?>" readonly="readonly" type="text" class="form-control input-sm" name="return_purchase_expire_year[]" pattern="^[0-9]+$" style="width:46px; text-align:center;">
+                                        </div>
+                                    </td>
+                                    <td><input required="required" value="<?= $value['return_purchase_mrp'] ?>" readonly="readonly" type="text" class="form-control input-sm" name="return_purchase_mrp[]"></td>
+                                    <td><input required="required" value="<?= $value['return_purchase_total'] ?>" readonly="readonly" type="text" class="form-control input-sm" name="return_purchase_total[]" style="background:#f8fafc; font-weight:600;"></td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-danger btn-xs btn-remove-row" onclick="removeRow(this)" title="Remove item">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
 
+                <div class="row" style="margin-top: 15px;">
+                    <div class="col-md-7 col-sm-12"></div>
+                    <div class="col-md-5 col-sm-12">
+                        <div class="return-summary-card">
+                            <div class="summary-row">
+                                <span class="summary-label">Total Return Items:</span>
+                                <span class="summary-val totalItem"><?= count($data) ?></span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="summary-label">Grand Return Total:</span>
+                                <span class="summary-val highlight-green">₹ <span class="totalAmount"><?= number_format($totalAmount, 2, '.', '') ?></span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                </p><p style="text-align: left;">   Ref:<input value="<?= $data[0]['return_purchase_ref'] ?>" required="required" type="text" autocomplete="off" name="return_purchase_ref"/>
-                </p>
-            </th>
-            <th  style=" border: none;">
-                <p style="text-align: left;">
-                    Return Type:
-                    <select name="return_purchase_type" required>
-                        <option value=''>--Choose one--</option>
-                       <?php
-                          foreach($return_purchase_type as $key=>$val){?>
-                        <option <?if($data[0]['return_purchase_type']==$key){ echo "selected";}
-                        ?> value="<?=$key?>"><?=$val?></option> 
-                           <?php }
-                        ?>
-                        </select>
-                </p>
-            </th>
-            <th  style=" border: none;">DATE: <input type="text" value="<?= date('m/d/Y', strtotime($data[0]['return_purchase_date'])) ?>"  required="required" autocomplete="off" name="expiry_date"/></th>
-        </tr>
-    </table>  
-    <table style=" border: none;">
-        <tr>
-            <th  style=" border: none; text-align: left;">Entry Number: <input required="required" value="<?= $data[0]['return_purchase_entry_number'] ?>" type="text"  name="return_purchase_entry_number"/></th>
-        </tr>
-    </table>
+            <div class="box-footer text-right" style="padding: 15px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0;">
+                <button type="submit" class="btn btn-primary btn-flat" style="padding: 8px 24px; font-size: 14px; font-weight: 600;">
+                    <i class="fa fa-save"></i> Save Changes
+                </button>
+                <button type="button" class="btn btn-default btn-flat" onclick="goBack()" style="padding: 8px 20px; font-size: 14px;">
+                    <i class="fa fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
 
-    <table style="border-top: 1px solid black; border-bottom: 1px solid black;">
-        <thead>
-        <caption><h2>Purchase Return Items</h2></caption>
-        <tr>
-            <th>Sr</th>
-            <th>Product Name</th>
-            <th>HSN</th>
-            <th>Batch</th>
-            <th>Strip</th>
-
-            <th>Exp date<br/>(MM/YY)</th>
-            <th>MRP</th>
-            <th>Total</th>
-        </tr>
-        </thead>
-        <tbody class="appendHere">
-<?php foreach ($data as $k => $value) { ?>
-                <tr class="rowline">
-                    <td><span><?= $k + 1 ?></span>
-                        <a href="javascript:void(0)" onclick="removeRow(this);"> Remove </a></td>
-                    <td><input required="required" type="text" value="<?= $value['return_purchase_medicine'] ?>" name="medicine_name[]"></td>
-                     <td><input required="required" type="text" value="<?= $value['return_purchase_HSN'] ?>" name="return_purchase_HSN[]"></td>
-                      <td><input required="required" type="text" value="<?= $value['return_purchase_Batch'] ?>" name="return_purchase_Batch[]" pattern="^\S+$"></td>
-                    <td><input required="required"  type="text" value="<?= $value['return_purchase_strip'] ?>" name="return_purchase_strip[]" style="width:80px;"></td>
-                    <td><input required="required" type="text" value="<?= $value['return_purchase_expire_month'] ?>" name="return_purchase_expire_month[]" pattern="^[0-9]+$" style="width: 20px;margin: 0;padding: 0;float: left;">
-                        <span style="margin: 0;padding: 0;float: left;">/</span>
-                        <input required="required" value="<?= $value['return_purchase_expire_year'] ?>" type="text" name="return_purchase_expire_year[]" pattern="^[0-9]+$" style="width: 20px;margin: 0;padding: 0;float: left;"> </td>
-                    <td><input required="required" value="<?= $value['return_purchase_mrp'] ?>" onkeyup="calcualteTotal(this)" type="text" name="return_purchase_mrp[]"  style="width: 50px;"></td>
-                    <td><input required="required" value="<?= $value['return_purchase_total'] ?>" readonly="readonly" type="text" name="return_purchase_total[]" style="width: 50px;"></td>
-                </tr>
-<?php } ?>
-
-        </tbody>
-    </table>
-    <a href="javascript:void(0)" onclick="addmore()" onmouseover="hide_history()">Add More</a>
-    <table style="border: 1px solid black;margin-top: 75px;" onmouseover="hide_history()">
-        <tr>
-            <th>Items</th>
-            <th>Grand Total</th>
-        </tr>
-        <tr>
-            <td class="totalItem">0</td>
-            <td class="totalAmount">0.00</td>
-        </tr>
-    </table>
-    <div class="form-actions" onmouseover="hide_history()">
-        <button type="submit" class="btn btn-primary">Save changes</button>
-        <button class="btn" onclick="goBack()">Cancel</button>
-    </div>
-</form>
 <script>
-    var lenOF = $('.appendHere').children('tr').length;
     function calcualteTotal(theObject) {
-        var qty = parseFloat($(theObject).parent().parent().find('[name^="return_purchase_strip[]"]').val());
-        var mrp = parseFloat($(theObject).parent().parent().find('[name^="return_purchase_mrp[]"]').val());
-        var total = (mrp * qty);
-        $(theObject).parent().parent().find('[name^="return_purchase_total[]"]').val(total.toFixed(2));
+        var $row = $(theObject).closest('.rowline');
+        var qty = parseFloat($row.find('[name^="return_purchase_strip"]').val()) || 0;
+        var mrp = parseFloat($row.find('[name^="return_purchase_mrp"]').val()) || 0;
+        var total = (mrp * qty).toFixed(2);
+        $row.find('[name^="return_purchase_total"]').val(total);
         calculate_amount();
     }
-    function calculate_amount(){
+
+    function calculate_amount() {
         var totalItem = $('.rowline').length;
         var totalTotal = 0;
-        $('.rowline').each(function () {
-           totalTotal += parseFloat($(this).find('[name="return_purchase_total[]"]').val());
+        $('.rowline').each(function() {
+            var val = parseFloat($(this).find('[name="return_purchase_total[]"]').val()) || 0;
+            totalTotal += val;
         });
-        $('.totalItem').html(totalItem.toFixed(2));
+        $('.totalItem').html(totalItem);
         $('.totalAmount').html(totalTotal.toFixed(2));
     }
-    var rowcount = lenOF;
-    function addmore() {
-        rowcount++;
-        var therow = " <tr id=\"rowID" + rowcount + " \" class=\"rowline\">\r\n<td><span>" + rowcount + "<\/span>\n\
-<a href=\"javascript:void(0)\" onclick=\"removeRow(this);\"> Remove <\/a><\/td>\r\n   \n\
-     <td><input required=\"required\" type=\"text\" name=\"medicine_name[]\"style=\"width:210px;\"><\/td>\r\n      \n\
-<td><input required=\"required\" type=\"number\" name=\"medicine_hsn[]\"style=\"width:210px;\"><\/td>\r\n      \n\
- <td><input required=\"required\" type=\"text\" name=\"return_purchase_Batch[]\"style=\"width:210px;\"><\/td>\r\n      \n\
-     <td><input required=\"required\" type=\"number\" name=\"return_purchase_strip[]\"style=\"width:80px;\"><\/td>\r\n      \n\
-     <td><input required=\"required\" type=\"text\" name=\"return_purchase_expire_month[]\" max=\"31\" min=\"1\" maxlength=\"2\" onfocusout=\"focusvalidation(this)\" style=\"width: 20px;margin: 0;padding: 0;\">\n\
-    <span style=\"margin: 0;padding: 0;\">/<\/span><input required=\"required\" type=\"text\" name=\"return_purchase_expire_year[]\" style=\"width: 20px;margin: 0;padding: 0;\"> <\/td>\r\n  \n\
-      <td><input required=\"required\" type=\"text\" onkeyup=\"calcualteTotal(this)\" name=\"return_purchase_mrp[]\" value=\"0.00\" style=\"width: 50px;\"><\/td>\r\n \n\
-      <td><input required=\"required\" readonly=\"readonly\"  type=\"text\" name=\"return_purchase_total[]\" value=\"0.00\" style=\"width: 50px;\"><\/td>\r\n \n\
-";
-        $('.appendHere').append(therow);
-<?php if (isset($this->page_config['autocomplete'])): ?>
-            var autoComplete = $.parseJSON('<?= json_encode($this->page_config['autocomplete']); ?>');
-            $.each(autoComplete, function (targetField, value) {
-                $.each(value, function (model, fieldToSearch) {
-                    $('.rowline').find('[name^="' + targetField + '[]"]').autocomplete({
-                        /*source: page_url + "autocomplete/" + model + '/' + fieldToSearch,*/
-                        source: '/search.php?table=' + model + '&fieldToSearch=' + fieldToSearch,
-                        minLength: 1, select: function (event, ui) {
-                            targetRow = $(this).parents('tr');
-                            $.each(ui.item.complete, function (populate_field, populate_value) {
-                                console.log(ui.item.complete);
-                                $(targetRow).find('[name^="' + populate_field + '"').val(populate_value);
-                            });
-                        }
 
-
-
-                    });
-                });
-            });
-<?php endif; ?>
-        console.log(rowcount);
-        $(document).find('.return_purchase_ref').keydown(function (e) {
-            console.log(12121);
-
-            var keyCode = e.keyCode || e.which;
-            console.log(keyCode);
-            console.log(e.shiftKey);
-            if (keyCode == 9 && !(e.shiftKey)) {
-                e.preventDefault();
-                $('.addm').click();
-                // call custom function here
-            }
-        });
-        $("[name^='return_purchase_total[]']").focus(function () {
-            addmore();
-        });
-        $(".rowline:last").find('[name^="medicine_name[]"]').focus();
-
-    }
-    $("[name^='return_purchase_total[]']").focus(function () {
-        addmore();
-    });
-    $(".rowline:last").find('[name^="medicine_name[]"]').focus();
-    
     function removeRow(targetObj) {
-        $(targetObj).parents('.rowline').remove();
+        $(targetObj).closest('.rowline').remove();
+        $('.appendHere .rowline').each(function(idx) {
+            $(this).find('td:first span').text(idx + 1);
+        });
         calculate_amount();
     }
 
-
-
-    $(document).ready(function () {
-        calculate_amount();
-        setTimeout(function () {
-            $('.alert').remove()
-        }, '2000');
-        addmore();
-        $("[name='expiry_date']").datepicker();
-        $("[name='expiry_date']").datepicker("option", "dateFormat", 'dd-MM-yy');
-<?php if (isset($this->page_config['autocomplete'])): ?>
-            var autoComplete = $.parseJSON('<?= json_encode($this->page_config['autocomplete']); ?>');
-            $.each(autoComplete, function (targetField, value) {
-                $.each(value, function (model, fieldToSearch) {
-                    $('[name="' + targetField + '"]').autocomplete({
-                        /*source: page_url + "autocomplete/" + model + '/' + fieldToSearch,*/
-                        source: '/search.php?table=' + model + '&fieldToSearch=' + fieldToSearch,
-                        minLength: 1, select: function (event, ui) {
-                            $.each(ui.item.complete, function (populate_field, populate_value) {
-                                $('[name="' + populate_field + '"]').val('');
-                            });
-                            $.each(ui.item.complete, function (populate_field, populate_value) {
-                                $('[name="' + populate_field + '"]').val(populate_value);
-                            });
-                        }
-
-                    });
-                });
-            });
-<?php endif; ?>
-    });
-
-    function saveTheData(targetObj) {
-        $.post(page_url + 'add_detail', $(targetObj).serialize(), function (resp) {
-            console.log(resp);
-            return false;
-        })
-        return false;
-    }
-    function focusvalidation(obg) {
-        //alert($(obg).val());
-        if ($(obg).val() > 31) {
-            alert('value is more than 31');
-            $(obg).val('');
-            $(obg).focus();
-            return false;
+    $(document).ready(function() {
+        if ($.fn.select2) {
+            $('.select2').select2();
         }
-    }
-
-
+        if ($.fn.datepicker) {
+            $("[name='expiry_date']").datepicker({
+                dateFormat: 'dd-M-yy',
+                changeMonth: true,
+                changeYear: true
+            });
+        }
+    });
 </script>

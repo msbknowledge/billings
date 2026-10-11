@@ -407,6 +407,19 @@ class Purchase extends MY_Controller {
                 $purchase[$i]['purchase_total'] = $this->input->post('purchase_total')[$i];
             }
             $data = $this->purchases_model->insert_data($purchase, true);
+            foreach ($purchase as $pItem) {
+                $qty = intval($pItem['purchase_quantity']) + intval($pItem['purchase_free_quantity']);
+                medicine_stock_update(
+                    $pItem['purchase_batch'],
+                    $pItem['purchase_medicine_id'],
+                    $qty,
+                    0,
+                    '+',
+                    $pItem['purchase_mrp'],
+                    $pItem['purchase_expire_month'],
+                    $pItem['purchase_expire_year']
+                );
+            }
             increase_purchase_number();
             if($this->input->get('autosave')==true){
               echo json_encode(array('status' => 'success',"entry_number"=>$this->input->post('purchase_entry_number'), 'message' => '<strong>Well done!</strong> Data Save.'));
@@ -939,15 +952,26 @@ class Purchase extends MY_Controller {
     /*     * *******correction needed*********** */
 
     private function medical_stock_update($old, $new) {
-        $toupdate = null;
-        $updatewith = null;
-        foreach ($old as $key => $value) {
-            $toupdate[$value['purchase_medicine_id']] = $value['purchase_quantity'];
-            $stockrollback = $value['purchase_quantity'] + $value['purchase_free_quantity'];
+        if (!empty($old)) {
+            foreach ($old as $item) {
+                $qty = intval($item['purchase_quantity']) + intval($item['purchase_free_quantity']);
+                medicine_stock_update($item['purchase_batch'], $item['purchase_medicine_id'], $qty, 0, '-');
+            }
         }
-        foreach ($new as $key => $value) {
-            $updatewith[$value['purchase_medicine_id']] = $value['purchase_quantity'];
-            $stockupdate = $value['purchase_quantity'] + $value['purchase_free_quantity'];
+        if (!empty($new)) {
+            foreach ($new as $item) {
+                $qty = intval($item['purchase_quantity']) + intval($item['purchase_free_quantity']);
+                medicine_stock_update(
+                    $item['purchase_batch'],
+                    $item['purchase_medicine_id'],
+                    $qty,
+                    0,
+                    '+',
+                    $item['purchase_mrp'],
+                    $item['purchase_expire_month'],
+                    $item['purchase_expire_year']
+                );
+            }
         }
     }
 
